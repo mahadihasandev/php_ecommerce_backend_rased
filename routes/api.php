@@ -16,6 +16,13 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
+// Health check & Keep-alive endpoint
+Route::get('/health', fn() => response()->json([
+    'status' => 'ok',
+    'uptime' => 'healthy',
+    'time' => now()->toIso8601String()
+]));
+
 // Authentication
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
