@@ -4,10 +4,8 @@ set -e
 # Replace port in nginx config if PORT is provided by Render
 TARGET_PORT="${PORT:-80}"
 echo "Configuring Nginx to listen on port $TARGET_PORT"
-sed -i "s/listen 80;/listen $TARGET_PORT;/g" /etc/nginx/conf.d/default.conf 2>/dev/null || true
-sed -i "s/listen \[::\]:80;/listen [::]:$TARGET_PORT;/g" /etc/nginx/conf.d/default.conf 2>/dev/null || true
-sed -i "s/listen 80;/listen $TARGET_PORT;/g" /etc/nginx/http.d/default.conf 2>/dev/null || true
-sed -i "s/listen \[::\]:80;/listen [::]:$TARGET_PORT;/g" /etc/nginx/http.d/default.conf 2>/dev/null || true
+sed -i "s/listen 80;/listen $TARGET_PORT;/g" /etc/nginx/nginx.conf 2>/dev/null || true
+sed -i "s/listen \[::\]:80;/listen [::]:$TARGET_PORT;/g" /etc/nginx/nginx.conf 2>/dev/null || true
 
 # Ensure storage directories exist and have proper permissions
 mkdir -p /var/www/html/storage/framework/sessions \

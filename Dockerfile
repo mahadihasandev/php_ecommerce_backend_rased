@@ -52,9 +52,9 @@ COPY --from=node_builder /app/public/build /var/www/html/public/build
 # Install PHP dependencies without dev packages
 RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-req=php
 
-# Copy Nginx configuration
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
-RUN mkdir -p /etc/nginx/http.d && cp /etc/nginx/conf.d/default.conf /etc/nginx/http.d/default.conf
+# Copy Nginx configuration directly to master config
+RUN rm -rf /etc/nginx/http.d/* /etc/nginx/conf.d/*
+COPY docker/nginx.conf /etc/nginx/nginx.conf
 
 # Copy and prepare entrypoint script (ensure Linux LF line endings)
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
