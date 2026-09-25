@@ -38,6 +38,7 @@ Route::get('/banners', [BannerController::class, 'index']);
 
 // Products (Note: specific sub-routes before {slug} to avoid route shadowing)
 Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/best-sellers', [ProductController::class, 'bestSellers']);
 Route::get('/products/hot-deals', [ProductController::class, 'hotDeals']);
 Route::get('/products/search', [ProductController::class, 'search']);
 Route::get('/products/{slug}', [ProductController::class, 'show']);

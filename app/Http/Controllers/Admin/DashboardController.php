@@ -40,10 +40,30 @@ class DashboardController extends Controller
         $totalVendors = User::where('role', 'vendor')->count();
         $totalUsers = User::count();
 
+        // Best selling products ranked by sales count, fallback to array serial (id asc)
+        $bestSellersQuery = Product::query()
+            ->with(['brand', 'categories'])
+            ->withSum(['orderItems as sales_count' => function ($query) {
+                $query->whereHas('order', function ($q) {
+                    $q->where('status', '!=', 'cancelled');
+                });
+            }], 'quantity');
+
+        if ($isVendor) {
+            $bestSellersQuery->where('user_id', $user->id);
+        }
+
+        $bestSellers = $bestSellersQuery
+            ->orderByDesc('sales_count')
+            ->orderBy('id', 'asc')
+            ->take(5)
+            ->get();
+
         return view('admin.dashboard', compact(
             'totalProducts',
             'lowStockCount',
             'recentProducts',
+            'bestSellers',
             'totalOrders',
             'totalRevenue',
             'recentOrders',

@@ -88,6 +88,34 @@ class ProductController extends Controller
     }
 
     /**
+     * Fetch best selling products ranked by sales count.
+     * When no products have sales yet (or sales count is 0), returns products in natural array serial (id asc).
+     */
+    public function bestSellers(Request $request)
+    {
+        $limit = max(1, min(50, (int) $request->get('limit', 10)));
+
+        $products = Product::with(['brand', 'categories'])
+            ->withSum(['orderItems as sales_count' => function ($query) {
+                $query->whereHas('order', function ($q) {
+                    $q->where('status', '!=', 'cancelled');
+                });
+            }], 'quantity')
+            ->orderByDesc('sales_count')
+            ->orderBy('id', 'asc')
+            ->limit($limit)
+            ->get();
+
+        $products->transform(function ($product) {
+            $product->sales_count = (int) ($product->sales_count ?? 0);
+            return $product;
+        });
+
+        return response()->json($products)
+            ->header('Cache-Control', 'public, max-age=15, stale-while-revalidate=60');
+    }
+
+    /**
      * Search products by keyword.
      */
     public function search(Request $request)
