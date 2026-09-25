@@ -38,6 +38,9 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         opcache \
         mbstring
 
+# Copy OPcache production configuration
+COPY docker/opcache.ini $PHP_INI_DIR/conf.d/opcache.ini
+
 # Copy Composer binary
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
