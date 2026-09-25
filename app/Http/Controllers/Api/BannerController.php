@@ -15,6 +15,6 @@ class BannerController extends Controller
         });
 
         return response()->json($banners)
-            ->header('Cache-Control', 'public, max-age=15, stale-while-revalidate=60');
+            ->header('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
     }
 }

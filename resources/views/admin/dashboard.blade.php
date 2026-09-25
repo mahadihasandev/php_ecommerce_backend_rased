@@ -189,23 +189,25 @@
                     </thead>
                     <tbody class="divide-y divide-slate-800/60">
                         @forelse($recentOrders as $order)
+                        @if(is_object($order) && isset($order->id))
                         <tr class="hover:bg-slate-800/30 transition-colors">
                             <td class="py-3 font-mono font-semibold text-white">
                                 <a href="{{ route('admin.orders.show', $order->id) }}" class="text-brand-400 hover:underline">
-                                    #{{ substr($order->orderNumber, 0, 10) }}
+                                    #{{ substr($order->orderNumber ?? (string)$order->id, 0, 10) }}
                                 </a>
                             </td>
-                            <td class="py-3 text-slate-300">{{ $order->customerName ?: 'Customer' }}</td>
-                            <td class="py-3 font-bold text-white">${{ number_format($order->totalPrice, 2) }}</td>
+                            <td class="py-3 text-slate-300">{{ $order->customerName ?? 'Customer' }}</td>
+                            <td class="py-3 font-bold text-white">${{ number_format($order->totalPrice ?? 0, 2) }}</td>
                             <td class="py-3 text-right">
                                 <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider
-                                    {{ $order->status === 'delivered' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 
-                                      ($order->status === 'cancelled' ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 
+                                    {{ ($order->status ?? '') === 'delivered' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 
+                                      (($order->status ?? '') === 'cancelled' ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 
                                       'bg-amber-500/15 text-amber-400 border border-amber-500/30') }}">
-                                    {{ $order->status }}
+                                    {{ $order->status ?? 'pending' }}
                                 </span>
                             </td>
                         </tr>
+                        @endif
                         @empty
                         <tr>
                             <td colspan="4" class="py-6 text-center text-slate-500 italic">No orders received yet.</td>

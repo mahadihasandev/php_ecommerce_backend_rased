@@ -11,9 +11,7 @@ use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Redirect root to Admin Dashboard
-Route::get('/', function () {
-    return redirect()->route('admin.dashboard');
-});
+Route::redirect('/', '/admin');
 
 // Admin & Vendor Auth Routes (Guest)
 Route::prefix('admin')->name('admin.')->group(function () {
@@ -25,7 +23,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 });
 
 // Protected Dashboard Routes (Admin, Vendor, Staff)
-Route::prefix('admin')->name('admin.')->middleware(['web', 'admin'])->group(function () {
+Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     // Overview
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
