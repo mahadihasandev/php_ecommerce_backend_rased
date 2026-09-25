@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#9333ea" />
+    </linearGradient>
+  </defs>
+  <!-- Rounded Squircle Base -->
+  <rect width="64" height="64" rx="16" fill="url(#grad)" />
+  
+  <!-- Shopping Bag Handle -->
+  <path d="M26 23V17C26 13.6863 28.6863 11 32 11C35.3137 11 38 13.6863 38 17V23" stroke="#ffffff" stroke-width="4" stroke-linecap="round" />
+  
+  <!-- Shopping Bag Body -->
+  <path d="M19 23H45L42 50H22L19 23Z" fill="#ffffff" />
+  
+  <!-- Inner Detail Pocket/Tag -->
+  <rect x="28" y="29" width="8" height="9" rx="2" fill="#6366f1" />
+</svg>

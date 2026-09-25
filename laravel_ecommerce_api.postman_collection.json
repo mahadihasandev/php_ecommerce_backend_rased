@@ -1,0 +1,823 @@
+{
+  "info": {
+    "name": "Laravel E-Commerce API",
+    "_postman_id": "c8f2b3a0-4567-4e89-9a1b-3c4d5e6f7a8b",
+    "description": "Complete REST API collection for the Laravel E-Commerce backend & Next.js Storefront. Includes authentication, product catalogs, categories, brands, banners, blogs, addresses, and order processing.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000/api",
+      "type": "string",
+      "description": "Base API URL for Laravel backend"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string",
+      "description": "Sanctum Bearer Token (automatically set upon Login or Register)"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "description": "User authentication, registration, token generation, and profile management with Laravel Sanctum.",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.token) {",
+                  "        pm.collectionVariables.set('token', json.token);",
+                  "        console.log('Token automatically saved to collection variable: token');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"johndoe_2380@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"phone\": \"+8801700000000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "register"
+              ]
+            },
+            "description": "Register a new customer account. Upon success (201), the bearer token is automatically saved into {{token}}."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    if (json.token) {",
+                  "        pm.collectionVariables.set('token', json.token);",
+                  "        console.log('Token automatically saved to collection variable: token');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@ecommerce.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "login"
+              ]
+            },
+            "description": "Authenticate with email & password. Automatically stores the Sanctum bearer token in collection variable `{{token}}`."
+          }
+        },
+        {
+          "name": "Get Authenticated User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "user"
+              ]
+            },
+            "description": "Get currently authenticated user's profile, role, and permissions."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "logout"
+              ]
+            },
+            "description": "Revoke the current Sanctum token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Products",
+      "description": "Product catalog browsing, multi-criteria filtering, hot deals, live search, and single product retrieval.",
+      "item": [
+        {
+          "name": "List All Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ]
+            },
+            "description": "Retrieve all active products with brand and categories relationships."
+          }
+        },
+        {
+          "name": "Filter Products by Category",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products?category=smartphones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "smartphones",
+                  "description": "Category slug, title, or _id"
+                }
+              ]
+            },
+            "description": "Filter products by category slug (e.g. smartphones, laptops, audio-tech, gaming)."
+          }
+        },
+        {
+          "name": "Filter Products by Brand",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products?brand=apple",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "brand",
+                  "value": "apple",
+                  "description": "Brand slug, title, or brandName"
+                }
+              ]
+            },
+            "description": "Filter products by brand slug (e.g. apple, sony, samsung, lg, microsoft)."
+          }
+        },
+        {
+          "name": "Filter Products by Price Range",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products?minPrice=100&maxPrice=1000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "minPrice",
+                  "value": "100"
+                },
+                {
+                  "key": "maxPrice",
+                  "value": "1000"
+                }
+              ]
+            },
+            "description": "Filter products by minimum and maximum price boundaries."
+          }
+        },
+        {
+          "name": "Filter Products by Variant",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products?variant=gadget",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "variant",
+                  "value": "gadget",
+                  "description": "Variant type: gadget, smartphones, laptops, appliances, etc."
+                }
+              ]
+            },
+            "description": "Filter products by product variant."
+          }
+        },
+        {
+          "name": "Get Hot Deals",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/hot-deals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "hot-deals"
+              ]
+            },
+            "description": "Retrieve curated top-discounted and promotional 'hot' deal items."
+          }
+        },
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/search?q=sony",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "sony",
+                  "description": "Search query text"
+                }
+              ]
+            },
+            "description": "Live search across product name, slug, and variant keywords."
+          }
+        },
+        {
+          "name": "Get Single Product by Slug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/sony-wh-1000xm5-wireless-headphones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "sony-wh-1000xm5-wireless-headphones"
+              ]
+            },
+            "description": "Fetch complete product details, image gallery, specs, bullet points, and related categories."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Categories",
+      "description": "Product category catalog and taxonomy.",
+      "item": [
+        {
+          "name": "List All Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories"
+              ]
+            },
+            "description": "Get all product categories with image badges and product counts."
+          }
+        },
+        {
+          "name": "Get Single Category by Slug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/categories/smartphones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "categories",
+                "smartphones"
+              ]
+            },
+            "description": "Fetch single category details by slug."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Brands",
+      "description": "Brand catalog and brand-specific storefront data.",
+      "item": [
+        {
+          "name": "List All Brands",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/brands",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "brands"
+              ]
+            },
+            "description": "Get all brands with logos and titles (Apple, Sony, Samsung, LG, Microsoft, Razer, etc.)."
+          }
+        },
+        {
+          "name": "Get Single Brand by Slug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/brands/apple",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "brands",
+                "apple"
+              ]
+            },
+            "description": "Fetch brand details by slug."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Banners",
+      "description": "Home page promotional banners and hero carousel sliders.",
+      "item": [
+        {
+          "name": "List All Banners",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/banners",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "banners"
+              ]
+            },
+            "description": "Retrieve all homepage promotional hero banners with titles, discount badges, and direct product detail links."
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Blogs & Editorial",
+      "description": "Editorial blog articles, tech insights, and blog categories.",
+      "item": [
+        {
+          "name": "List All Blogs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/blogs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs"
+              ]
+            },
+            "description": "Get published blog articles with author and category relations."
+          }
+        },
+        {
+          "name": "Get Latest Blogs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/blogs/latest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs",
+                "latest"
+              ]
+            },
+            "description": "Retrieve the most recently published blog posts."
+          }
+        },
+        {
+          "name": "Get Other Blogs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/blogs/others",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs",
+                "others"
+              ]
+            },
+            "description": "Retrieve secondary/recommended editorial posts."
+          }
+        },
+        {
+          "name": "Get Single Blog by Slug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/blogs/spatial-audio-breakthrough-2026",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blogs",
+                "spatial-audio-breakthrough-2026"
+              ]
+            },
+            "description": "Fetch single blog post with body paragraphs, author bio, and categories."
+          }
+        },
+        {
+          "name": "List Blog Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/blog-categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "blog-categories"
+              ]
+            },
+            "description": "List all blog categorization tags."
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Addresses",
+      "description": "User shipping and billing address management.",
+      "item": [
+        {
+          "name": "List User Addresses",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/addresses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "addresses"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "Optional filter by user ID"
+                }
+              ]
+            },
+            "description": "List saved addresses for the authenticated user."
+          }
+        },
+        {
+          "name": "Create Address",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe Home\",\n  \"email\": \"johndoe@example.com\",\n  \"address\": \"House 45, Road 11, Banani\",\n  \"city\": \"Dhaka\",\n  \"District\": \"Dhaka\",\n  \"state\": \"Dhaka Division\",\n  \"zip\": \"1213\",\n  \"phone\": \"+8801700000000\",\n  \"default\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/addresses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "addresses"
+              ]
+            },
+            "description": "Add a new shipping address. If default is true, previous defaults are automatically unset."
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Orders & Checkout",
+      "description": "Order creation, transaction recording, and customer order history.",
+      "item": [
+        {
+          "name": "List Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "Optional filter by user ID"
+                }
+              ]
+            },
+            "description": "Retrieve orders list for the user with line items and product details."
+          }
+        },
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderNumber\": \"ORD-1790280954320\",\n  \"customerName\": \"John Doe\",\n  \"email\": \"johndoe@example.com\",\n  \"totalPrice\": 949.98,\n  \"amountDiscount\": 50,\n  \"currency\": \"USD\",\n  \"status\": \"paid\",\n  \"address\": {\n    \"name\": \"John Doe\",\n    \"address\": \"House 45, Road 11, Banani\",\n    \"city\": \"Dhaka\",\n    \"zip\": \"1213\"\n  },\n  \"products\": [\n    {\n      \"id\": 1,\n      \"name\": \"Sony WH-1000XM5 Wireless Headphones\",\n      \"price\": 339.99,\n      \"quantity\": 1,\n      \"image\": \"/storage/products/sony.webp\"\n    },\n    {\n      \"id\": 27,\n      \"name\": \"EcoFlow RIVER 2 Pro 768Wh Portable Solar Generator Station\",\n      \"price\": 491.18,\n      \"quantity\": 1,\n      \"image\": \"/storage/products/ecoflow_river2_pro.webp\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Place a new customer order with line items, address, and pricing details."
+          }
+        },
+        {
+          "name": "Get Single Order by Order Number or ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/ord-1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                "ord-1"
+              ]
+            },
+            "description": "Get detailed order information, items, pricing, and status by orderNumber or ID."
+          }
+        }
+      ]
+    }
+  ]
+}
