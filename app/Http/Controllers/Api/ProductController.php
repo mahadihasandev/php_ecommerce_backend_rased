@@ -50,11 +50,16 @@ class ProductController extends Controller
                 $query->where('price', '<=', (float) $request->get('maxPrice'));
             }
 
-            if ($request->has('limit')) {
-                $query->limit((int) $request->get('limit'));
+            $perPage = max(1, min(100, (int) $request->get('limit', $request->get('per_page', 20))));
+            $page = max(1, (int) $request->get('page', 1));
+
+            // Support both standard paginator object and page-sliced array
+            if ($request->boolean('paginate')) {
+                return $query->latest()->paginate($perPage)->toArray();
             }
 
-            return $query->latest()->get()->toArray();
+            // Return page-sliced array for direct consumption
+            return $query->latest()->forPage($page, $perPage)->get()->toArray();
         });
 
         return response()->json($products)
@@ -95,15 +100,16 @@ class ProductController extends Controller
     }
 
     /**
-     * Fetch best selling products ranked by sales count.
+     * Fetch best selling products ranked by sales count with pagination support.
      * When no products have sales yet (or sales count is 0), returns products in natural array serial (id asc).
      */
     public function bestSellers(Request $request)
     {
-        $limit = max(1, min(50, (int) $request->get('limit', 10)));
-        $cacheKey = 'api_best_sellers_' . $limit;
+        $limit = max(1, min(100, (int) $request->get('limit', $request->get('per_page', 10))));
+        $page = max(1, (int) $request->get('page', 1));
+        $cacheKey = 'api_best_sellers_' . $limit . '_p_' . $page . ($request->boolean('paginate') ? '_pag' : '');
 
-        $products = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($limit) {
+        $products = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($limit, $page, $request) {
             $query = Product::with(['brand', 'categories'])
                 ->withSum(['orderItems as sales_count' => function ($q) {
                     $q->whereHas('order', function ($sub) {
@@ -111,16 +117,24 @@ class ProductController extends Controller
                     });
                 }], 'quantity')
                 ->orderByDesc('sales_count')
-                ->orderBy('id', 'asc')
-                ->limit($limit)
-                ->get();
+                ->orderBy('id', 'asc');
 
-            $query->transform(function ($product) {
+            if ($request->boolean('paginate')) {
+                $paginated = $query->paginate($limit);
+                $paginated->getCollection()->transform(function ($product) {
+                    $product->sales_count = (int) ($product->sales_count ?? 0);
+                    return $product;
+                });
+                return $paginated->toArray();
+            }
+
+            $items = $query->forPage($page, $limit)->get();
+            $items->transform(function ($product) {
                 $product->sales_count = (int) ($product->sales_count ?? 0);
                 return $product;
             });
 
-            return $query->toArray();
+            return $items->toArray();
         });
 
         return response()->json($products)

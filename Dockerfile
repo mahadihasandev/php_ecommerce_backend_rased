@@ -12,6 +12,7 @@ FROM php:8.4-fpm-alpine
 # Install system dependencies
 RUN apk add --no-cache \
     nginx \
+    redis \
     curl \
     git \
     libpng-dev \
@@ -23,7 +24,11 @@ RUN apk add --no-cache \
     postgresql-dev \
     oniguruma-dev \
     bash \
-    dos2unix
+    dos2unix \
+    autoconf \
+    g++ \
+    make \
+    linux-headers
 
 # Configure and install PHP extensions required by Laravel & Supabase PostgreSQL
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -36,7 +41,10 @@ RUN docker-php-ext-configure gd --with-freetype --with-jpeg \
         zip \
         bcmath \
         opcache \
-        mbstring
+        mbstring \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del autoconf g++ make linux-headers
 
 # Copy OPcache production configuration
 COPY docker/opcache.ini $PHP_INI_DIR/conf.d/opcache.ini

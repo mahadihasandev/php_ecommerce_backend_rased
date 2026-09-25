@@ -30,14 +30,16 @@ class OrderController extends Controller
 
         $orders = $query->paginate(15)->withQueryString();
         
-        $statusCounts = [
-            'all' => Order::count(),
-            'pending' => Order::where('status', 'pending')->count(),
-            'processing' => Order::where('status', 'processing')->count(),
-            'shipped' => Order::where('status', 'shipped')->count(),
-            'delivered' => Order::where('status', 'delivered')->count(),
-            'cancelled' => Order::where('status', 'cancelled')->count(),
-        ];
+        $statusCounts = \Illuminate\Support\Facades\Cache::remember('admin_order_status_counts', 60, function () {
+            return [
+                'all' => Order::count(),
+                'pending' => Order::where('status', 'pending')->count(),
+                'processing' => Order::where('status', 'processing')->count(),
+                'shipped' => Order::where('status', 'shipped')->count(),
+                'delivered' => Order::where('status', 'delivered')->count(),
+                'cancelled' => Order::where('status', 'cancelled')->count(),
+            ];
+        });
 
         return view('admin.orders.index', compact('orders', 'statusCounts', 'status'));
     }

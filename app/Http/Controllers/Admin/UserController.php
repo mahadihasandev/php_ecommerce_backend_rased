@@ -34,13 +34,15 @@ class UserController extends Controller
 
         $users = $query->paginate(15)->withQueryString();
 
-        $roleCounts = [
-            'all' => User::count(),
-            'admin' => User::where('role', 'admin')->count(),
-            'vendor' => User::where('role', 'vendor')->count(),
-            'staff' => User::where('role', 'staff')->count(),
-            'customer' => User::where('role', 'customer')->count(),
-        ];
+        $roleCounts = \Illuminate\Support\Facades\Cache::remember('admin_user_role_counts', 60, function () {
+            return [
+                'all' => User::count(),
+                'admin' => User::where('role', 'admin')->count(),
+                'vendor' => User::where('role', 'vendor')->count(),
+                'staff' => User::where('role', 'staff')->count(),
+                'customer' => User::where('role', 'customer')->count(),
+            ];
+        });
 
         return view('admin.users.index', compact('users', 'roleCounts', 'role'));
     }

@@ -7,6 +7,12 @@ echo "Configuring Nginx to listen on port $TARGET_PORT"
 sed -i "s/listen 80;/listen $TARGET_PORT;/g" /etc/nginx/nginx.conf 2>/dev/null || true
 sed -i "s/listen \[::\]:80;/listen [::]:$TARGET_PORT;/g" /etc/nginx/nginx.conf 2>/dev/null || true
 
+# Start in-container Redis cache server if no external Redis is specified
+if [ -z "$REDIS_URL" ]; then
+    echo "Starting in-container Redis cache server..."
+    redis-server --daemonize yes --maxmemory 128mb --maxmemory-policy allkeys-lru --bind 127.0.0.1 --port 6379 || echo "Redis started or already running."
+fi
+
 # Ensure storage directories exist and have proper permissions
 mkdir -p /var/www/html/storage/framework/sessions \
          /var/www/html/storage/framework/views \
