@@ -13,45 +13,52 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with(['brand', 'categories']);
+        $cacheKey = 'api_products_' . md5(json_encode($request->all()));
 
-        if ($request->filled('variant')) {
-            $variant = strtolower($request->get('variant'));
-            $query->whereRaw('LOWER(variant) = ?', [$variant]);
-        }
+        $products = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($request) {
+            $query = Product::with(['brand', 'categories']);
 
-        if ($request->filled('category')) {
-            $cat = $request->get('category');
-            $query->whereHas('categories', function ($q) use ($cat) {
-                $q->where('slug', $cat)
-                    ->orWhere('_id', $cat)
-                    ->orWhere('title', $cat);
-            });
-        }
+            if ($request->filled('variant')) {
+                $variant = strtolower($request->get('variant'));
+                $query->whereRaw('LOWER(variant) = ?', [$variant]);
+            }
 
-        if ($request->filled('brand')) {
-            $brand = $request->get('brand');
-            $query->whereHas('brand', function ($q) use ($brand) {
-                $q->where('slug', $brand)
-                    ->orWhere('_id', $brand)
-                    ->orWhere('title', $brand)
-                    ->orWhere('brandName', $brand);
-            });
-        }
+            if ($request->filled('category')) {
+                $cat = $request->get('category');
+                $query->whereHas('categories', function ($q) use ($cat) {
+                    $q->where('slug', $cat)
+                        ->orWhere('_id', $cat)
+                        ->orWhere('title', $cat);
+                });
+            }
 
-        if ($request->filled('minPrice')) {
-            $query->where('price', '>=', (float) $request->get('minPrice'));
-        }
+            if ($request->filled('brand')) {
+                $brand = $request->get('brand');
+                $query->whereHas('brand', function ($q) use ($brand) {
+                    $q->where('slug', $brand)
+                        ->orWhere('_id', $brand)
+                        ->orWhere('title', $brand)
+                        ->orWhere('brandName', $brand);
+                });
+            }
 
-        if ($request->filled('maxPrice')) {
-            $query->where('price', '<=', (float) $request->get('maxPrice'));
-        }
+            if ($request->filled('minPrice')) {
+                $query->where('price', '>=', (float) $request->get('minPrice'));
+            }
 
-        if ($request->has('limit')) {
-            $query->limit((int) $request->get('limit'));
-        }
+            if ($request->filled('maxPrice')) {
+                $query->where('price', '<=', (float) $request->get('maxPrice'));
+            }
 
-        return response()->json($query->latest()->get());
+            if ($request->has('limit')) {
+                $query->limit((int) $request->get('limit'));
+            }
+
+            return $query->latest()->get()->toArray();
+        });
+
+        return response()->json($products)
+            ->header('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300');
     }
 
     /**
@@ -94,25 +101,30 @@ class ProductController extends Controller
     public function bestSellers(Request $request)
     {
         $limit = max(1, min(50, (int) $request->get('limit', 10)));
+        $cacheKey = 'api_best_sellers_' . $limit;
 
-        $products = Product::with(['brand', 'categories'])
-            ->withSum(['orderItems as sales_count' => function ($query) {
-                $query->whereHas('order', function ($q) {
-                    $q->where('status', '!=', 'cancelled');
-                });
-            }], 'quantity')
-            ->orderByDesc('sales_count')
-            ->orderBy('id', 'asc')
-            ->limit($limit)
-            ->get();
+        $products = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($limit) {
+            $query = Product::with(['brand', 'categories'])
+                ->withSum(['orderItems as sales_count' => function ($q) {
+                    $q->whereHas('order', function ($sub) {
+                        $sub->where('status', '!=', 'cancelled');
+                    });
+                }], 'quantity')
+                ->orderByDesc('sales_count')
+                ->orderBy('id', 'asc')
+                ->limit($limit)
+                ->get();
 
-        $products->transform(function ($product) {
-            $product->sales_count = (int) ($product->sales_count ?? 0);
-            return $product;
+            $query->transform(function ($product) {
+                $product->sales_count = (int) ($product->sales_count ?? 0);
+                return $product;
+            });
+
+            return $query->toArray();
         });
 
         return response()->json($products)
-            ->header('Cache-Control', 'public, max-age=15, stale-while-revalidate=60');
+            ->header('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300');
     }
 
     /**
