@@ -28,39 +28,49 @@ class AdminAuthController extends Controller
      */
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
-        ]);
+        try {
+            $credentials = $request->validate([
+                'email' => ['required', 'email'],
+                'password' => ['required', 'string'],
+            ]);
 
-        $remember = $request->boolean('remember');
+            $remember = $request->boolean('remember');
 
-        if (Auth::attempt($credentials, $remember)) {
-            $user = Auth::user();
+            if (Auth::attempt($credentials, $remember)) {
+                $user = Auth::user();
 
-            if ($user->status === 'suspended') {
-                Auth::logout();
-                return back()->withErrors([
-                    'email' => 'This account has been suspended. Please contact support.',
-                ])->onlyInput('email');
+                if ($user->status === 'suspended') {
+                    Auth::logout();
+                    return back()->withErrors([
+                        'email' => 'This account has been suspended. Please contact support.',
+                    ])->onlyInput('email');
+                }
+
+                if (!in_array($user->role, ['admin', 'vendor', 'staff'], true)) {
+                    Auth::logout();
+                    return back()->withErrors([
+                        'email' => 'Access denied. You do not have vendor or administrator privileges.',
+                    ])->onlyInput('email');
+                }
+
+                $request->session()->regenerate();
+
+                return redirect()->intended(route('admin.dashboard'))
+                    ->with('success', "Welcome back, {$user->name}!");
             }
 
-            if (!in_array($user->role, ['admin', 'vendor', 'staff'], true)) {
-                Auth::logout();
-                return back()->withErrors([
-                    'email' => 'Access denied. You do not have vendor or administrator privileges.',
-                ])->onlyInput('email');
-            }
+            return back()->withErrors([
+                'email' => 'The provided credentials do not match our records.',
+            ])->onlyInput('email');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Admin Login Error: ' . $e->getMessage(), [
+                'exception' => $e,
+            ]);
 
-            $request->session()->regenerate();
-
-            return redirect()->intended(route('admin.dashboard'))
-                ->with('success', "Welcome back, {$user->name}!");
+            return back()->withErrors([
+                'email' => 'System error: ' . $e->getMessage(),
+            ])->onlyInput('email');
         }
-
-        return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
-        ])->onlyInput('email');
     }
 
     /**
