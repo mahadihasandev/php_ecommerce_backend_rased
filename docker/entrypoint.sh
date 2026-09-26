@@ -17,12 +17,10 @@ fi
 mkdir -p /var/www/html/storage/framework/sessions \
          /var/www/html/storage/framework/views \
          /var/www/html/storage/framework/cache \
+         /var/www/html/storage/framework/cache/data \
          /var/www/html/storage/logs \
          /var/www/html/bootstrap/cache \
          /run/nginx
-
-chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
-chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Create storage symlink
 php artisan storage:link --force || true
@@ -40,6 +38,10 @@ if [ "${AUTO_MIGRATE:-true}" = "true" ]; then
     echo "Running database migrations..."
     php artisan migrate --force || echo "Migration encountered an issue or database is starting up."
 fi
+
+# Ensure all files created during bootstrap/artisan are owned and writable by www-data
+chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 echo "Starting PHP-FPM..."
 php-fpm -D
