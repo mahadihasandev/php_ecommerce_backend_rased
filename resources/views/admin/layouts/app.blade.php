@@ -22,11 +22,13 @@
 
     <!-- Tailwind CSS CDN -->
     <script>
-        const _origWarn = console.warn;
-        console.warn = function(...args) {
-            if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
-            _origWarn.apply(console, args);
-        };
+        if (!window._origWarn) {
+            window._origWarn = console.warn;
+            console.warn = function(...args) {
+                if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+                window._origWarn.apply(console, args);
+            };
+        }
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -487,20 +489,20 @@
                         }
                     });
 
-                    // Execute any new scripts included in the response
-                    doc.querySelectorAll('script').forEach(oldScript => {
-                        if (oldScript.src && !document.querySelector(`script[src="${oldScript.src}"]`)) {
+                    // Execute only page-specific scripts (e.g. from @stack('scripts') or content)
+                    doc.body.querySelectorAll('script').forEach(oldScript => {
+                        const scriptText = oldScript.textContent.trim();
+                        // Skip global layout scripts
+                        if (!scriptText || scriptText.includes('AdminNav') || scriptText.includes('_origWarn') || scriptText.includes('lucide.createIcons')) {
+                            return;
+                        }
+                        try {
                             const newScript = document.createElement('script');
                             Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                            newScript.textContent = scriptText;
                             document.body.appendChild(newScript);
-                        } else if (!oldScript.src && oldScript.textContent.trim()) {
-                            try {
-                                const newScript = document.createElement('script');
-                                newScript.textContent = oldScript.textContent;
-                                document.body.appendChild(newScript);
-                            } catch(e) {
-                                console.error('Script exec err:', e);
-                            }
+                        } catch(e) {
+                            console.warn('Page script execution error:', e);
                         }
                     });
 
