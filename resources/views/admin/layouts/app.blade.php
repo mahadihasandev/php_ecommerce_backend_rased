@@ -63,9 +63,47 @@
         ::-webkit-scrollbar-track { background: #0f172a; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Skeleton Shimmer Waves */
+        @keyframes shimmerWave {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        .shimmer {
+            position: relative;
+            overflow: hidden;
+        }
+        .shimmer::after {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            left: 0;
+            transform: translateX(-100%);
+            background-image: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0) 0,
+                rgba(255, 255, 255, 0.05) 35%,
+                rgba(255, 255, 255, 0.16) 50%,
+                rgba(255, 255, 255, 0.05) 65%,
+                rgba(255, 255, 255, 0) 100%
+            );
+            animation: shimmerWave 1.6s infinite ease-in-out;
+            content: "";
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.2s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="h-full font-sans antialiased overflow-hidden flex bg-slate-950" x-data="{ sidebarOpen: false }">
+
+    <!-- Top Loading Progress Bar -->
+    <div id="admin-top-progress" class="fixed top-0 left-0 h-1 bg-gradient-to-r from-brand-500 via-indigo-400 to-purple-500 z-[9999] transition-all duration-300 pointer-events-none opacity-0 shadow-lg shadow-brand-500/50" style="width: 0%;"></div>
 
     <!-- Mobile Sidebar Backdrop -->
     <div x-show="sidebarOpen" 
@@ -207,8 +245,8 @@
                     <i data-lucide="menu" class="w-5 h-5"></i>
                 </button>
                 <div class="hidden sm:block">
-                    <h1 class="text-lg font-bold text-white tracking-tight">@yield('page_title', 'Dashboard')</h1>
-                    <p class="text-xs text-slate-400">@yield('page_subtitle', 'Manage store inventory, banners, orders, and vendors')</p>
+                    <h1 id="navbar-page-title" class="text-lg font-bold text-white tracking-tight">@yield('page_title', 'Dashboard')</h1>
+                    <p id="navbar-page-subtitle" class="text-xs text-slate-400">@yield('page_subtitle', 'Manage store inventory, banners, orders, and vendors')</p>
                 </div>
             </div>
 
@@ -217,10 +255,10 @@
                 <a href="http://localhost:3000" target="_blank" 
                    class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-300 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 hover:text-white transition-all shadow-sm">
                     <i data-lucide="external-link" class="w-3.5 h-3.5 text-brand-400"></i>
-                    <span>Live Next.js Store</span>
+                    <span class="hidden md:inline">Live Next.js Store</span>
                 </a>
 
-                <form action="{{ route('admin.purge-cache') }}" method="POST" class="inline">
+                <form action="{{ route('admin.purge-cache') }}" method="POST" class="inline" onsubmit="window.AdminNav && window.AdminNav.startProgress()">
                     @csrf
                     <button type="submit" title="Flush Redis / App Cache" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-500/50 transition-all shadow-sm cursor-pointer">
                         <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
@@ -239,59 +277,304 @@
         </header>
 
         <!-- Main Body Scroll Container -->
-        <main class="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6">
+        <main id="admin-main-scroll" class="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6">
             
             <!-- Toast Notifications -->
-            @if(session('success'))
-            <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)" 
-                 class="flex items-center justify-between p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 shadow-lg backdrop-blur-md">
-                <div class="flex items-center gap-3">
-                    <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
-                    <span class="text-sm font-medium">{{ session('success') }}</span>
+            <div id="admin-toasts">
+                @if(session('success'))
+                <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)" 
+                     class="flex items-center justify-between p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 shadow-lg backdrop-blur-md mb-4">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+                        <span class="text-sm font-medium">{{ session('success') }}</span>
+                    </div>
+                    <button @click="show = false" class="text-emerald-400 hover:text-emerald-200">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
                 </div>
-                <button @click="show = false" class="text-emerald-400 hover:text-emerald-200">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
-            @endif
+                @endif
 
-            @if(session('error'))
-            <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 7000)" 
-                 class="flex items-center justify-between p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 shadow-lg backdrop-blur-md">
-                <div class="flex items-center gap-3">
-                    <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-400"></i>
-                    <span class="text-sm font-medium">{{ session('error') }}</span>
+                @if(session('error'))
+                <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 7000)" 
+                     class="flex items-center justify-between p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 shadow-lg backdrop-blur-md mb-4">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="alert-triangle" class="w-5 h-5 text-rose-400"></i>
+                        <span class="text-sm font-medium">{{ session('error') }}</span>
+                    </div>
+                    <button @click="show = false" class="text-rose-400 hover:text-rose-200">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
                 </div>
-                <button @click="show = false" class="text-rose-400 hover:text-rose-200">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-            </div>
-            @endif
+                @endif
 
-            @if(isset($errors) && $errors->any())
-            <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300">
-                <div class="flex items-center gap-2 font-semibold text-sm mb-1">
-                    <i data-lucide="alert-circle" class="w-4 h-4 text-rose-400"></i>
-                    <span>Please fix the following errors:</span>
+                @if(isset($errors) && $errors->any())
+                <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 mb-4">
+                    <div class="flex items-center gap-2 font-semibold text-sm mb-1">
+                        <i data-lucide="alert-circle" class="w-4 h-4 text-rose-400"></i>
+                        <span>Please fix the following errors:</span>
+                    </div>
+                    <ul class="list-disc list-inside text-xs space-y-1 text-rose-300/90 pl-1">
+                        @foreach($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
                 </div>
-                <ul class="list-disc list-inside text-xs space-y-1 text-rose-300/90 pl-1">
-                    @foreach($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
+                @endif
             </div>
-            @endif
 
-            <!-- Dynamic View Content -->
-            @yield('content')
+            <!-- Dynamic View Content Container -->
+            <div id="admin-content-real" class="animate-fade-in">
+                @yield('content')
+            </div>
+
+            <!-- Instant Skeleton Loading Overlay (Shown during navigation) -->
+            <div id="admin-skeleton-overlay" class="hidden">
+                @include('admin.components.skeleton')
+            </div>
         </main>
     </div>
 
-    <!-- Initialize Lucide Icons -->
+    <!-- Initialize Lucide Icons & Instant Navigation Engine -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            lucide.createIcons();
+            if (window.lucide) {
+                lucide.createIcons();
+            }
         });
+
+        // Instant Navigation & Shimmer Skeleton Engine
+        window.AdminNav = (function() {
+            const progressBar = document.getElementById('admin-top-progress');
+            const contentReal = document.getElementById('admin-content-real');
+            const skeletonOverlay = document.getElementById('admin-skeleton-overlay');
+            const mainScroll = document.getElementById('admin-main-scroll');
+            let progressInterval = null;
+
+            function startProgress() {
+                if (!progressBar) return;
+                clearInterval(progressInterval);
+                progressBar.style.transition = 'width 0.25s ease-out, opacity 0.2s ease-in';
+                progressBar.style.opacity = '1';
+                progressBar.style.width = '35%';
+
+                let currentWidth = 35;
+                progressInterval = setInterval(() => {
+                    if (currentWidth < 85) {
+                        currentWidth += Math.random() * 15;
+                        progressBar.style.width = Math.min(currentWidth, 88) + '%';
+                    }
+                }, 180);
+            }
+
+            function completeProgress() {
+                if (!progressBar) return;
+                clearInterval(progressInterval);
+                progressBar.style.transition = 'width 0.15s ease-in, opacity 0.25s ease-out';
+                progressBar.style.width = '100%';
+                setTimeout(() => {
+                    progressBar.style.opacity = '0';
+                    setTimeout(() => {
+                        progressBar.style.width = '0%';
+                    }, 250);
+                }, 150);
+            }
+
+            function showSkeleton(targetUrl) {
+                if (!skeletonOverlay || !contentReal) return;
+                
+                const urlStr = (targetUrl || '').toLowerCase();
+                const dView = document.getElementById('skeleton-dashboard-view');
+                const tView = document.getElementById('skeleton-table-view');
+                const fView = document.getElementById('skeleton-form-view');
+                const sText = document.getElementById('skeleton-status-text');
+
+                if (urlStr.includes('/create') || urlStr.includes('/edit')) {
+                    if (dView) dView.classList.add('hidden');
+                    if (tView) tView.classList.add('hidden');
+                    if (fView) fView.classList.remove('hidden');
+                    if (sText) sText.textContent = 'Preparing form editor & component assets...';
+                } else if (urlStr.endsWith('/admin') || urlStr.endsWith('/admin/')) {
+                    if (dView) dView.classList.remove('hidden');
+                    if (tView) tView.classList.add('hidden');
+                    if (fView) fView.classList.add('hidden');
+                    if (sText) sText.textContent = 'Loading live store analytics & catalog metrics...';
+                } else {
+                    if (dView) dView.classList.add('hidden');
+                    if (tView) tView.classList.remove('hidden');
+                    if (fView) fView.classList.add('hidden');
+                    if (sText) sText.textContent = 'Fetching latest catalog records & status data...';
+                }
+
+                contentReal.classList.add('hidden');
+                skeletonOverlay.classList.remove('hidden');
+            }
+
+            function hideSkeleton() {
+                if (!skeletonOverlay || !contentReal) return;
+                skeletonOverlay.classList.add('hidden');
+                contentReal.classList.remove('hidden');
+            }
+
+            async function navigateTo(url, pushState = true) {
+                startProgress();
+                showSkeleton(url);
+
+                try {
+                    const response = await fetch(url, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    // If redirected or non-200, fallback to native navigation
+                    if (response.redirected || !response.ok) {
+                        window.location.href = url;
+                        return;
+                    }
+
+                    const htmlText = await response.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlText, 'text/html');
+
+                    const newContent = doc.getElementById('admin-content-real');
+                    if (!newContent) {
+                        window.location.href = url;
+                        return;
+                    }
+
+                    // Update Document Title
+                    if (doc.title) {
+                        document.title = doc.title;
+                    }
+
+                    // Update Navbar Page Title & Subtitle
+                    const newPageTitle = doc.getElementById('navbar-page-title');
+                    const curPageTitle = document.getElementById('navbar-page-title');
+                    if (newPageTitle && curPageTitle) {
+                        curPageTitle.textContent = newPageTitle.textContent;
+                    }
+
+                    const newPageSubtitle = doc.getElementById('navbar-page-subtitle');
+                    const curPageSubtitle = document.getElementById('navbar-page-subtitle');
+                    if (newPageSubtitle && curPageSubtitle) {
+                        curPageSubtitle.textContent = newPageSubtitle.textContent;
+                    }
+
+                    // Update Toasts
+                    const newToasts = doc.getElementById('admin-toasts');
+                    const curToasts = document.getElementById('admin-toasts');
+                    if (newToasts && curToasts) {
+                        curToasts.innerHTML = newToasts.innerHTML;
+                    }
+
+                    // Swap Main Content
+                    contentReal.innerHTML = newContent.innerHTML;
+
+                    // Update Sidebar Active Highlight
+                    const currentPath = new URL(url, window.location.origin).pathname.replace(/\/+$/, '');
+                    document.querySelectorAll('aside a[href]').forEach(a => {
+                        const aPath = new URL(a.href, window.location.origin).pathname.replace(/\/+$/, '');
+                        const isActive = (aPath === currentPath) || (aPath !== '/admin' && currentPath.startsWith(aPath));
+
+                        if (isActive) {
+                            a.className = a.className
+                                .replace('text-slate-400 hover:text-white hover:bg-slate-800/60', '')
+                                .trim() + ' bg-brand-600 text-white shadow-lg shadow-brand-600/30 font-semibold';
+                        } else {
+                            a.className = a.className
+                                .replace('bg-brand-600 text-white shadow-lg shadow-brand-600/30 font-semibold', '')
+                                .trim() + ' text-slate-400 hover:text-white hover:bg-slate-800/60';
+                        }
+                    });
+
+                    // Execute any new scripts included in the response
+                    doc.querySelectorAll('script').forEach(oldScript => {
+                        if (oldScript.src && !document.querySelector(`script[src="${oldScript.src}"]`)) {
+                            const newScript = document.createElement('script');
+                            Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                            document.body.appendChild(newScript);
+                        } else if (!oldScript.src && oldScript.textContent.trim()) {
+                            try {
+                                const newScript = document.createElement('script');
+                                newScript.textContent = oldScript.textContent;
+                                document.body.appendChild(newScript);
+                            } catch(e) {
+                                console.error('Script exec err:', e);
+                            }
+                        }
+                    });
+
+                    // Re-init Lucide Icons
+                    if (window.lucide) {
+                        lucide.createIcons();
+                    }
+
+                    // Re-init Alpine tree on new content if available
+                    if (window.Alpine && window.Alpine.initTree) {
+                        try {
+                            window.Alpine.initTree(contentReal);
+                        } catch(e) {}
+                    }
+
+                    // Update Browser URL History
+                    if (pushState) {
+                        history.pushState({ url }, '', url);
+                    }
+
+                    // Scroll to top smoothly
+                    if (mainScroll) {
+                        mainScroll.scrollTo({ top: 0, behavior: 'instant' });
+                    }
+
+                    hideSkeleton();
+                    completeProgress();
+                } catch(err) {
+                    console.warn('Instant navigation fallback:', err);
+                    window.location.href = url;
+                }
+            }
+
+            // Intercept internal admin clicks
+            document.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                if (!link || !link.href) return;
+
+                // Ignore clicks with modifiers (new tab / window)
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+                if (link.target === '_blank' || link.hasAttribute('download')) return;
+
+                const href = link.getAttribute('href');
+                if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+
+                const targetUrl = new URL(link.href, window.location.origin);
+                if (targetUrl.origin !== window.location.origin) return;
+                if (!targetUrl.pathname.startsWith('/admin')) return;
+                if (targetUrl.pathname.includes('/logout')) return;
+
+                e.preventDefault();
+                if (targetUrl.href === window.location.href) return;
+
+                navigateTo(targetUrl.href, true);
+            });
+
+            // Handle Browser Back / Forward buttons
+            window.addEventListener('popstate', function(e) {
+                navigateTo(window.location.href, false);
+            });
+
+            // Progress bar feedback on beforeunload (form submits, etc.)
+            window.addEventListener('beforeunload', function() {
+                startProgress();
+            });
+
+            return {
+                startProgress,
+                completeProgress,
+                showSkeleton,
+                hideSkeleton,
+                navigateTo
+            };
+        })();
     </script>
     @stack('scripts')
 </body>
