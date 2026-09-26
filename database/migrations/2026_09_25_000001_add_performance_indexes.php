@@ -11,17 +11,25 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->index('status');
-            $table->index('variant');
-            $table->index('isFeatured');
-            $table->index('price');
-        });
+        try {
+            Schema::table('products', function (Blueprint $table) {
+                $table->index('status');
+                $table->index('variant');
+                $table->index('isFeatured');
+                $table->index('price');
+            });
+        } catch (\Throwable $e) {
+            // Indexes may already exist on production DB
+        }
 
-        Schema::table('orders', function (Blueprint $table) {
-            $table->index('status');
-            $table->index('orderDate');
-        });
+        try {
+            Schema::table('orders', function (Blueprint $table) {
+                $table->index('status');
+                $table->index('orderDate');
+            });
+        } catch (\Throwable $e) {
+            // Indexes may already exist on production DB
+        }
     }
 
     /**

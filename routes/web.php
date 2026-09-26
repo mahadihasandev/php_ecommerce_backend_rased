@@ -10,6 +10,13 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
+// Health check & Keep-alive endpoint (bypasses auth for pings)
+Route::get('/health', fn() => response()->json([
+    'status' => 'ok',
+    'uptime' => 'healthy',
+    'time' => now()->toIso8601String()
+]));
+
 // Redirect root to Admin Dashboard
 Route::redirect('/', '/admin');
 

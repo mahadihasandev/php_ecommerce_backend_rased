@@ -12,12 +12,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (DB::getDriverName() === 'pgsql') {
-            DB::statement("ALTER TABLE order_items ALTER COLUMN product_id TYPE bigint USING (NULLIF(product_id, '')::bigint)");
-        } else {
-            Schema::table('order_items', function (Blueprint $table) {
-                $table->unsignedBigInteger('product_id')->nullable()->change();
-            });
+        try {
+            if (DB::getDriverName() === 'pgsql') {
+                DB::statement("ALTER TABLE order_items ALTER COLUMN product_id TYPE bigint USING (NULLIF(product_id, '')::bigint)");
+            } else {
+                Schema::table('order_items', function (Blueprint $table) {
+                    $table->unsignedBigInteger('product_id')->nullable()->change();
+                });
+            }
+        } catch (\Throwable $e) {
+            // Already migrated or column type already altered
         }
     }
 

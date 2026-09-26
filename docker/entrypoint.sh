@@ -46,5 +46,14 @@ chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 echo "Starting PHP-FPM..."
 php-fpm -D
 
+# Start background keep-alive pinger every 13 minutes (prevents Render 15-minute idle spin-down)
+(
+    while true; do
+        sleep 780
+        curl -s -m 20 "https://php-ecommerce-backend-rased.onrender.com/health" >/dev/null 2>&1 || true
+        curl -s -m 20 "https://e-commerce-rased.onrender.com/api/health" >/dev/null 2>&1 || true
+    done
+) &
+
 echo "Starting Nginx on port $TARGET_PORT..."
 exec nginx -g "daemon off;"

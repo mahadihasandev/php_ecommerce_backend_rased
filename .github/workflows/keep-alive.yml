@@ -2,18 +2,38 @@ name: Render Keep Alive Ping
 
 on:
   schedule:
-    # Runs every 14 minutes to prevent Render free tier from spinning down
-    - cron: '*/14 * * * *'
+    # Runs every 13 minutes to prevent Render free tier from spinning down (15 min idle timeout)
+    - cron: '*/13 * * * *'
   workflow_dispatch: # Allows manual trigger from GitHub UI
 
 jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Render Backend Health Check
-        env:
-          RENDER_URL: ${{ secrets.RENDER_BACKEND_URL }}
+      - name: Ping Render Backend & Frontend Health Checks
         run: |
-          TARGET_URL="${RENDER_URL:-https://laravel-ecommerce-api.onrender.com/api/health}"
-          echo "Pinging $TARGET_URL ..."
-          curl -s -f -m 30 "$TARGET_URL" || echo "Ping request finished."
+          echo "=========================================="
+          echo "Pinging Render Services ($(date))"
+          echo "=========================================="
+          
+          # Ping Backend
+          BACKEND_URL="${{ secrets.RENDER_BACKEND_URL }}"
+          TARGET_BACKEND="${BACKEND_URL:-https://php-ecommerce-backend-rased.onrender.com/api/health}"
+          echo "Pinging Backend: $TARGET_BACKEND ..."
+          STATUS_B=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "$TARGET_BACKEND" || echo "FAIL")
+          echo "Backend Response Status: $STATUS_B"
+          
+          # Ping Frontend
+          FRONTEND_URL="${{ secrets.RENDER_FRONTEND_URL }}"
+          TARGET_FRONTEND="${FRONTEND_URL:-https://e-commerce-rased.onrender.com/api/health}"
+          echo "Pinging Frontend: $TARGET_FRONTEND ..."
+          STATUS_F=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "$TARGET_FRONTEND" || echo "FAIL")
+          echo "Frontend Response Status: $STATUS_F"
+          
+          # If Frontend /api/health is 404 on initial build, fallback to root
+          if [ "$STATUS_F" = "404" ]; then
+            echo "Falling back to Frontend root URL..."
+            curl -s -o /dev/null -w "%{http_code}" -m 30 "https://e-commerce-rased.onrender.com/" || true
+          fi
+          
+          echo "Ping run complete."
