@@ -85,6 +85,17 @@ class DashboardController extends Controller
             );
         });
 
+        // Self-healing guard: if cached data was corrupted or contains incomplete classes, purge and reload
+        if (
+            !is_array($data) ||
+            (isset($data['recentOrders']) && $data['recentOrders'] instanceof \__PHP_Incomplete_Class) ||
+            (isset($data['recentProducts']) && $data['recentProducts'] instanceof \__PHP_Incomplete_Class) ||
+            (isset($data['bestSellers']) && $data['bestSellers'] instanceof \__PHP_Incomplete_Class)
+        ) {
+            Cache::forget($cacheKey);
+            return redirect()->route('admin.dashboard');
+        }
+
         $cacheStore = config('cache.default', 'redis');
 
         return view('admin.dashboard', array_merge($data, compact('isVendor', 'cacheStore')));

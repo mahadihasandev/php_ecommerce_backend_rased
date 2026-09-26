@@ -133,6 +133,6 @@ return [
     |
     */
 
-    'serializable_classes' => false,
+    'serializable_classes' => true,
 
 ];
