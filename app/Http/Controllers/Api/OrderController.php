@@ -32,11 +32,22 @@ class OrderController extends Controller
      */
     public function show($identifier)
     {
-        $order = Order::with('products')
-            ->where('orderNumber', $identifier)
-            ->orWhere('_id', $identifier)
-            ->orWhere('id', $identifier)
-            ->firstOrFail();
+        $query = Order::with('products');
+
+        if (is_numeric($identifier)) {
+            $query->where(function ($q) use ($identifier) {
+                $q->where('id', (int) $identifier)
+                    ->orWhere('orderNumber', $identifier)
+                    ->orWhere('_id', $identifier);
+            });
+        } else {
+            $query->where(function ($q) use ($identifier) {
+                $q->where('orderNumber', $identifier)
+                    ->orWhere('_id', $identifier);
+            });
+        }
+
+        $order = $query->firstOrFail();
 
         return response()->json($order);
     }

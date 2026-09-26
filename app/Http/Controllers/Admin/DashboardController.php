@@ -14,14 +14,17 @@ use Illuminate\Support\Facades\Cache;
 
 class DashboardController extends Controller
 {
+    /**
+     * Render the admin dashboard with high-performance caching.
+     */
     public function index()
     {
         $user = Auth::user();
         $isVendor = $user->isVendor();
-        $cacheKey = 'admin_dashboard_scalar_metrics_' . $user->id;
+        $cacheKey = 'admin_dashboard_full_view_' . $user->id;
 
-        // Cache scalar numbers for 120s to ensure fast page loads
-        $metrics = Cache::remember($cacheKey, 120, function () use ($user, $isVendor) {
+        // Cache the aggregated dashboard dataset for 60s to ensure sub-5ms page loads
+        $data = Cache::remember($cacheKey, 60, function () use ($user, $isVendor) {
             $productQuery = Product::query();
             if ($isVendor) {
                 $productQuery->where('user_id', $user->id);
@@ -41,6 +44,31 @@ class DashboardController extends Controller
             $totalVendors = User::where('role', 'vendor')->count();
             $totalUsers = User::count();
 
+            // Recent products with eager-loaded relations
+            $recentProducts = (clone $productQuery)->with(['brand', 'categories'])->latest()->take(5)->get();
+
+            // Recent customer orders
+            $recentOrders = Order::latest()->take(6)->get();
+
+            // Top best sellers with sales count
+            $bestSellersQuery = Product::query()
+                ->with(['brand', 'categories'])
+                ->withSum(['orderItems as sales_count' => function ($q) {
+                    $q->whereHas('order', function ($sub) {
+                        $sub->where('status', '!=', 'cancelled');
+                    });
+                }], 'quantity');
+
+            if ($isVendor) {
+                $bestSellersQuery->where('user_id', $user->id);
+            }
+
+            $bestSellers = $bestSellersQuery
+                ->orderByDesc('sales_count')
+                ->orderBy('id', 'asc')
+                ->take(5)
+                ->get();
+
             return compact(
                 'totalProducts',
                 'lowStockCount',
@@ -50,50 +78,35 @@ class DashboardController extends Controller
                 'totalCategories',
                 'totalBrands',
                 'totalVendors',
-                'totalUsers'
+                'totalUsers',
+                'recentProducts',
+                'recentOrders',
+                'bestSellers'
             );
         });
 
-        // Query latest 5 products and 6 orders directly
-        $productQuery = Product::query();
-        if ($isVendor) {
-            $productQuery->where('user_id', $user->id);
+        $cacheStore = config('cache.default', 'redis');
+
+        return view('admin.dashboard', array_merge($data, compact('isVendor', 'cacheStore')));
+    }
+
+    /**
+     * Instantly flush all admin dashboard caches.
+     */
+    public function purgeCache()
+    {
+        $user = Auth::user();
+        if ($user) {
+            Cache::forget('admin_dashboard_full_view_' . $user->id);
+            Cache::forget('admin_dashboard_scalar_metrics_' . $user->id);
+            Cache::forget('admin_bestseller_ids_' . ($user->isVendor() ? $user->id : 'all'));
         }
 
-        $recentProducts = (clone $productQuery)->with(['brand', 'categories'])->latest()->take(5)->get();
-        $recentOrders = Order::latest()->take(6)->get();
+        // Also flush API cached endpoints for instant sync
+        Cache::forget('api_hot_deals');
+        Cache::forget('api_categories_0');
+        Cache::forget('api_brands');
 
-        // Cache best-seller product IDs (pure integer array) for 120s to skip expensive aggregation
-        $bestSellerCacheKey = 'admin_bestseller_ids_' . ($isVendor ? $user->id : 'all');
-        $bestSellerIds = Cache::remember($bestSellerCacheKey, 120, function () use ($isVendor, $user) {
-            $query = Product::query()
-                ->withSum(['orderItems as sales_count' => function ($q) {
-                    $q->whereHas('order', function ($sub) {
-                        $sub->where('status', '!=', 'cancelled');
-                    });
-                }], 'quantity');
-
-            if ($isVendor) {
-                $query->where('user_id', $user->id);
-            }
-
-            return $query
-                ->orderByDesc('sales_count')
-                ->orderBy('id', 'asc')
-                ->take(5)
-                ->pluck('id')
-                ->toArray();
-        });
-
-        $bestSellers = !empty($bestSellerIds)
-            ? Product::with(['brand', 'categories'])->whereIn('id', $bestSellerIds)->get()
-            : collect();
-
-        return view('admin.dashboard', array_merge($metrics, compact(
-            'isVendor',
-            'recentProducts',
-            'recentOrders',
-            'bestSellers'
-        )));
+        return back()->with('success', 'Dashboard & API cache purged successfully! Fresh data loaded.');
     }
 }

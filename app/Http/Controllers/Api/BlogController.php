@@ -32,11 +32,22 @@ class BlogController extends Controller
 
     public function show($slug)
     {
-        $blog = Blog::with(['author', 'blogcategories'])
-            ->where('slug', $slug)
-            ->orWhere('_id', $slug)
-            ->orWhere('id', $slug)
-            ->firstOrFail();
+        $query = Blog::with(['author', 'blogcategories']);
+
+        if (is_numeric($slug)) {
+            $query->where(function ($q) use ($slug) {
+                $q->where('id', (int) $slug)
+                    ->orWhere('slug', $slug)
+                    ->orWhere('_id', $slug);
+            });
+        } else {
+            $query->where(function ($q) use ($slug) {
+                $q->where('slug', $slug)
+                    ->orWhere('_id', $slug);
+            });
+        }
+
+        $blog = $query->firstOrFail();
 
         return response()->json($blog);
     }

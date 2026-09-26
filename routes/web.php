@@ -26,6 +26,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     // Overview
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    Route::post('/purge-cache', [DashboardController::class, 'purgeCache'])->name('purge-cache');
 
     // Products
     Route::resource('products', ProductController::class);

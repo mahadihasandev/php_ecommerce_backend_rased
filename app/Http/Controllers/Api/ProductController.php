@@ -71,11 +71,22 @@ class ProductController extends Controller
      */
     public function show($slug)
     {
-        $product = Product::with(['brand', 'categories'])
-            ->where('slug', $slug)
-            ->orWhere('_id', $slug)
-            ->orWhere('id', $slug)
-            ->firstOrFail();
+        $query = Product::with(['brand', 'categories']);
+
+        if (is_numeric($slug)) {
+            $query->where(function ($q) use ($slug) {
+                $q->where('id', (int) $slug)
+                    ->orWhere('slug', $slug)
+                    ->orWhere('_id', $slug);
+            });
+        } else {
+            $query->where(function ($q) use ($slug) {
+                $q->where('slug', $slug)
+                    ->orWhere('_id', $slug);
+            });
+        }
+
+        $product = $query->firstOrFail();
 
         return response()->json($product);
     }

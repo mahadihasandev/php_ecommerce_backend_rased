@@ -27,10 +27,22 @@ class CategoryController extends Controller
 
     public function show($slug)
     {
-        $category = Category::where('slug', $slug)
-            ->orWhere('_id', $slug)
-            ->orWhere('id', $slug)
-            ->firstOrFail();
+        $query = Category::query();
+
+        if (is_numeric($slug)) {
+            $query->where(function ($q) use ($slug) {
+                $q->where('id', (int) $slug)
+                    ->orWhere('slug', $slug)
+                    ->orWhere('_id', $slug);
+            });
+        } else {
+            $query->where(function ($q) use ($slug) {
+                $q->where('slug', $slug)
+                    ->orWhere('_id', $slug);
+            });
+        }
+
+        $category = $query->firstOrFail();
 
         return response()->json($category);
     }

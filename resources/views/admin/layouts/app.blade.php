@@ -220,6 +220,14 @@
                     <span>Live Next.js Store</span>
                 </a>
 
+                <form action="{{ route('admin.purge-cache') }}" method="POST" class="inline">
+                    @csrf
+                    <button type="submit" title="Flush Redis / App Cache" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 hover:border-amber-500/50 transition-all shadow-sm cursor-pointer">
+                        <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span class="hidden md:inline">Flush Cache</span>
+                    </button>
+                </form>
+
                 @if(auth()->user()->hasPermission('manage_products'))
                 <a href="{{ route('admin.products.create') }}" 
                    class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 shadow-lg shadow-brand-500/25 transition-all">
@@ -260,7 +268,7 @@
             </div>
             @endif
 
-            @if($errors->any())
+            @if(isset($errors) && $errors->any())
             <div class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300">
                 <div class="flex items-center gap-2 font-semibold text-sm mb-1">
                     <i data-lucide="alert-circle" class="w-4 h-4 text-rose-400"></i>

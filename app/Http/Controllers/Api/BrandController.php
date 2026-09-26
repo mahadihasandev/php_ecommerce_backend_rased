@@ -20,10 +20,22 @@ class BrandController extends Controller
 
     public function show($slug)
     {
-        $brand = Brand::where('slug', $slug)
-            ->orWhere('_id', $slug)
-            ->orWhere('id', $slug)
-            ->firstOrFail();
+        $query = Brand::query();
+
+        if (is_numeric($slug)) {
+            $query->where(function ($q) use ($slug) {
+                $q->where('id', (int) $slug)
+                    ->orWhere('slug', $slug)
+                    ->orWhere('_id', $slug);
+            });
+        } else {
+            $query->where(function ($q) use ($slug) {
+                $q->where('slug', $slug)
+                    ->orWhere('_id', $slug);
+            });
+        }
+
+        $brand = $query->firstOrFail();
 
         return response()->json($brand);
     }
