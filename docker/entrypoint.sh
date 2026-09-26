@@ -50,7 +50,6 @@ php-fpm -D
 (
     while true; do
         sleep 780
-        curl -s -m 20 "https://php-ecommerce-backend-rased.onrender.com/health" >/dev/null 2>&1 || true
         curl -s -m 20 "https://e-commerce-rased.onrender.com/api/health" >/dev/null 2>&1 || true
     done
 ) &

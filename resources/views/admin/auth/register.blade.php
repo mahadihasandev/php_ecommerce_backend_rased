@@ -7,18 +7,17 @@
     <!-- Tab Favicon -->
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
     <link rel="alternate icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script>
-        const _origWarn = console.warn;
-        console.warn = function(...args) {
-            if (typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
-            _origWarn.apply(console, args);
-        };
-    </script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <style>body { font-family: 'Plus Jakarta Sans', sans-serif; } [x-cloak] { display: none !important; }</style>
+    <!-- Preload Self-Hosted Fonts -->
+    <link rel="preload" href="{{ asset('fonts/plus-jakarta-sans-latin.woff2') }}" as="font" type="font/woff2" crossorigin>
+
+    <!-- Pre-compiled Assets (Tailwind v4 + Alpine.js + Lucide Icons) -->
+    @if (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @else
+        <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
+        <script defer src="{{ asset('js/admin.js') }}"></script>
+    @endif
+    <style>[x-cloak] { display: none !important; }</style>
 </head>
 <body class="min-h-full flex items-center justify-center p-6 bg-radial-gradient from-slate-900 via-slate-950 to-black relative overflow-hidden" 
       x-data="{ accountType: 'vendor' }">

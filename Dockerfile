@@ -59,6 +59,8 @@ COPY . .
 
 # Copy Vite build artifacts from stage 1
 COPY --from=node_builder /app/public/build /var/www/html/public/build
+COPY --from=node_builder /app/public/css /var/www/html/public/css
+COPY --from=node_builder /app/public/js /var/www/html/public/js
 
 # Install PHP dependencies without dev packages
 RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-req=php
