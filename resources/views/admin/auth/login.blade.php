@@ -148,7 +148,6 @@
     </div>
 
     <script>
-        lucide.createIcons();
         function fillCreds(email, password) {
             document.getElementById('email').value = email;
             document.getElementById('password').value = password;

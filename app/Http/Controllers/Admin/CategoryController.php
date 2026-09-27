@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreCategoryRequest;
 use App\Models\Category;
 use App\Services\ImageUploadService;
+use App\Services\PerformanceCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -15,9 +16,11 @@ class CategoryController extends Controller
         protected ImageUploadService $imageUploadService
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $categories = Category::withCount('products')->latest()->paginate(15);
+        $categories = PerformanceCache::remember(PerformanceCache::requestKey('admin_categories_', $request),
+            fn () => Category::withCount('products')->latest()->paginate(15));
+
         return view('admin.categories.index', compact('categories'));
     }
 
@@ -30,8 +33,8 @@ class CategoryController extends Controller
     {
         $validated = $request->validated();
 
-        $slug = !empty($validated['slug']) 
-            ? Str::slug($validated['slug']) 
+        $slug = ! empty($validated['slug'])
+            ? Str::slug($validated['slug'])
             : Str::slug($validated['title']);
 
         $imageUrl = null;
@@ -54,6 +57,7 @@ class CategoryController extends Controller
     public function edit($id)
     {
         $category = Category::findOrFail($id);
+
         return view('admin.categories.edit', compact('category'));
     }
 
@@ -63,13 +67,13 @@ class CategoryController extends Controller
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255', 'unique:categories,slug,' . $id],
+            'slug' => ['nullable', 'string', 'max:255', 'unique:categories,slug,'.$id],
             'description' => ['nullable', 'string'],
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp,svg', 'max:5120'],
         ]);
 
-        $slug = !empty($validated['slug']) 
-            ? Str::slug($validated['slug']) 
+        $slug = ! empty($validated['slug'])
+            ? Str::slug($validated['slug'])
             : Str::slug($validated['title']);
 
         $imageUrl = $category->image;

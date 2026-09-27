@@ -7,6 +7,7 @@ use App\Http\Requests\Admin\StoreBannerRequest;
 use App\Http\Requests\Admin\UpdateBannerRequest;
 use App\Models\Banner;
 use App\Services\ImageUploadService;
+use App\Services\PerformanceCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -19,9 +20,11 @@ class BannerController extends Controller
     /**
      * Display a listing of banners.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $banners = Banner::with('user')->latest()->paginate(10);
+        $banners = PerformanceCache::remember(PerformanceCache::requestKey('admin_banners_', $request),
+            fn () => Banner::with('user')->latest()->paginate(10));
+
         return view('admin.banners.index', compact('banners'));
     }
 
@@ -67,6 +70,7 @@ class BannerController extends Controller
     public function edit($id)
     {
         $banner = Banner::findOrFail($id);
+
         return view('admin.banners.edit', compact('banner'));
     }
 

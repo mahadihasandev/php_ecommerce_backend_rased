@@ -74,7 +74,7 @@
                         </td>
                         <td class="py-4 px-4">
                             <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700/60">
-                                {{ $order->orderItems->count() }} items
+                                {{ $order->products_count }} items
                             </span>
                         </td>
                         <td class="py-4 px-4 font-bold text-white">

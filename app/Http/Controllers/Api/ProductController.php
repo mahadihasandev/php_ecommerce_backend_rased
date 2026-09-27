@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Services\PerformanceCache;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
@@ -13,9 +14,11 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $cacheKey = 'api_products_' . md5(json_encode($request->all()));
+        $filters = $request->only(['variant', 'category', 'brand', 'minPrice', 'maxPrice', 'limit', 'per_page', 'page', 'paginate']);
+        ksort($filters);
+        $cacheKey = 'api_products_'.hash('sha256', $request->url().json_encode($filters));
 
-        $products = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($request) {
+        $products = PerformanceCache::remember($cacheKey, function () use ($request) {
             $query = Product::with(['brand', 'categories']);
 
             if ($request->filled('variant')) {
@@ -63,7 +66,7 @@ class ProductController extends Controller
         });
 
         return response()->json($products)
-            ->header('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300');
+            ->header('Cache-Control', 'public, max-age=15, s-maxage=15');
     }
 
     /**
@@ -71,22 +74,24 @@ class ProductController extends Controller
      */
     public function show($slug)
     {
-        $query = Product::with(['brand', 'categories']);
+        $product = PerformanceCache::remember('api_product_'.hash('sha256', (string) $slug), function () use ($slug) {
+            $query = Product::with(['brand', 'categories']);
 
-        if (is_numeric($slug)) {
-            $query->where(function ($q) use ($slug) {
-                $q->where('id', (int) $slug)
-                    ->orWhere('slug', $slug)
-                    ->orWhere('_id', $slug);
-            });
-        } else {
-            $query->where(function ($q) use ($slug) {
-                $q->where('slug', $slug)
-                    ->orWhere('_id', $slug);
-            });
-        }
+            if (is_numeric($slug)) {
+                $query->where(function ($q) use ($slug) {
+                    $q->where('id', (int) $slug)
+                        ->orWhere('slug', $slug)
+                        ->orWhere('_id', $slug);
+                });
+            } else {
+                $query->where(function ($q) use ($slug) {
+                    $q->where('slug', $slug)
+                        ->orWhere('_id', $slug);
+                });
+            }
 
-        $product = $query->firstOrFail();
+            return $query->firstOrFail()->toArray();
+        });
 
         return response()->json($product);
     }
@@ -96,7 +101,7 @@ class ProductController extends Controller
      */
     public function hotDeals()
     {
-        $products = \Illuminate\Support\Facades\Cache::remember('api_hot_deals', 60, function () {
+        $products = PerformanceCache::remember('api_hot_deals', function () {
             return Product::with(['brand', 'categories'])
                 ->where('status', 'hot')
                 ->orWhere('discount', '>', 10)
@@ -107,7 +112,7 @@ class ProductController extends Controller
         });
 
         return response()->json($products)
-            ->header('Cache-Control', 'public, max-age=15, stale-while-revalidate=60');
+            ->header('Cache-Control', 'public, max-age=15, s-maxage=15');
     }
 
     /**
@@ -118,30 +123,27 @@ class ProductController extends Controller
     {
         $limit = max(1, min(100, (int) $request->get('limit', $request->get('per_page', 10))));
         $page = max(1, (int) $request->get('page', 1));
-        $cacheKey = 'api_best_sellers_' . $limit . '_p_' . $page . ($request->boolean('paginate') ? '_pag' : '');
+        $cacheKey = 'api_best_sellers_'.hash('sha256', $request->url()).'_'.$limit.'_p_'.$page.($request->boolean('paginate') ? '_pag' : '');
 
-        $products = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($limit, $page, $request) {
+        $products = PerformanceCache::remember($cacheKey, function () use ($limit, $page, $request) {
             $query = Product::with(['brand', 'categories'])
-                ->withSum(['orderItems as sales_count' => function ($q) {
-                    $q->whereHas('order', function ($sub) {
-                        $sub->where('status', '!=', 'cancelled');
-                    });
-                }], 'quantity')
-                ->orderByDesc('sales_count')
-                ->orderBy('id', 'asc');
+                ->rankedBySales();
 
             if ($request->boolean('paginate')) {
                 $paginated = $query->paginate($limit);
                 $paginated->getCollection()->transform(function ($product) {
                     $product->sales_count = (int) ($product->sales_count ?? 0);
+
                     return $product;
                 });
+
                 return $paginated->toArray();
             }
 
             $items = $query->forPage($page, $limit)->get();
             $items->transform(function ($product) {
                 $product->sales_count = (int) ($product->sales_count ?? 0);
+
                 return $product;
             });
 
@@ -149,7 +151,7 @@ class ProductController extends Controller
         });
 
         return response()->json($products)
-            ->header('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300');
+            ->header('Cache-Control', 'public, max-age=15, s-maxage=15');
     }
 
     /**
@@ -163,14 +165,16 @@ class ProductController extends Controller
             return response()->json([]);
         }
 
-        $products = Product::with(['brand', 'categories'])
-            ->where(function ($q) use ($keyword) {
-                $q->where('name', 'like', "%{$keyword}%")
-                    ->orWhere('slug', 'like', "%{$keyword}%")
-                    ->orWhere('variant', 'like', "%{$keyword}%");
-            })
-            ->latest()
-            ->get();
+        $products = PerformanceCache::remember('api_search_'.hash('sha256', $keyword), function () use ($keyword) {
+            return Product::with(['brand', 'categories'])
+                ->where(function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%")
+                        ->orWhere('slug', 'like', "%{$keyword}%")
+                        ->orWhere('variant', 'like', "%{$keyword}%");
+                })
+                ->latest()
+                ->get()->toArray();
+        });
 
         return response()->json($products);
     }
