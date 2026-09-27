@@ -8,13 +8,14 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Middleware\InvalidatePerformanceCache;
 use Illuminate\Support\Facades\Route;
 
 // Health check & Keep-alive endpoint (bypasses auth for pings)
-Route::get('/health', fn() => response()->json([
+Route::get('/health', fn () => response()->json([
     'status' => 'ok',
     'uptime' => 'healthy',
-    'time' => now()->toIso8601String()
+    'time' => now()->toIso8601String(),
 ]));
 
 // Redirect root to Admin Dashboard
@@ -25,12 +26,12 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AdminAuthController::class, 'login']);
     Route::get('/register', [AdminAuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AdminAuthController::class, 'register']);
+    Route::post('/register', [AdminAuthController::class, 'register'])->middleware(InvalidatePerformanceCache::class);
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 });
 
 // Protected Dashboard Routes (Admin, Vendor, Staff)
-Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['admin', InvalidatePerformanceCache::class])->group(function () {
     // Overview
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/purge-cache', [DashboardController::class, 'purgeCache'])->name('purge-cache');

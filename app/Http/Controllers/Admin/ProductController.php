@@ -9,6 +9,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Services\ImageUploadService;
+use App\Services\PerformanceCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -25,7 +26,8 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $user = Auth::user();
-        $query = Product::with(['brand', 'categories', 'user']);
+        $query = Product::select(['id', 'user_id', 'brand_id', 'name', 'slug', 'price', 'discount', 'stock', 'status', 'variant', 'isFeatured', 'images', 'created_at'])
+            ->with(['brand:id,title', 'categories:id,title', 'user:id,name,store_name']);
 
         // Multi-vendor scoping: vendors see only their products
         if ($user->isVendor()) {
@@ -36,7 +38,7 @@ class ProductController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('slug', 'like', "%{$search}%");
+                    ->orWhere('slug', 'like', "%{$search}%");
             });
         }
 
@@ -54,8 +56,9 @@ class ProductController extends Controller
             $query->where('stock', '<=', 0);
         }
 
-        $products = $query->latest()->paginate(12)->withQueryString();
-        $categories = Category::orderBy('title')->get();
+        $products = PerformanceCache::remember(PerformanceCache::requestKey('admin_products_', $request),
+            fn () => $query->latest()->paginate(12)->withQueryString());
+        $categories = PerformanceCache::remember('admin_category_options', fn () => Category::select(['id', 'title'])->orderBy('title')->get());
 
         return view('admin.products.index', compact('products', 'categories'));
     }
@@ -65,8 +68,8 @@ class ProductController extends Controller
      */
     public function create()
     {
-        $categories = Category::orderBy('title')->get();
-        $brands = Brand::orderBy('title')->get();
+        $categories = PerformanceCache::remember('admin_category_options', fn () => Category::select(['id', 'title'])->orderBy('title')->get());
+        $brands = PerformanceCache::remember('admin_brand_options', fn () => Brand::select(['id', 'title'])->orderBy('title')->get());
 
         return view('admin.products.create', compact('categories', 'brands'));
     }
@@ -80,8 +83,8 @@ class ProductController extends Controller
         $user = Auth::user();
 
         // 1. Generate unique slug if not provided
-        $slug = !empty($validated['slug']) 
-            ? Str::slug($validated['slug']) 
+        $slug = ! empty($validated['slug'])
+            ? Str::slug($validated['slug'])
             : Str::slug($validated['name']);
 
         $originalSlug = $slug;
@@ -99,7 +102,7 @@ class ProductController extends Controller
 
         // 3. Process key features
         $keyfeatures = [];
-        if (!empty($validated['keyfeature'])) {
+        if (! empty($validated['keyfeature'])) {
             $keyfeatures = array_values(array_filter(array_map('trim', (array) $validated['keyfeature'])));
         }
 
@@ -121,7 +124,7 @@ class ProductController extends Controller
         ]);
 
         // 5. Attach categories
-        if (!empty($validated['category_ids'])) {
+        if (! empty($validated['category_ids'])) {
             $product->categories()->sync($validated['category_ids']);
         }
 
@@ -142,8 +145,8 @@ class ProductController extends Controller
             abort(403, 'Unauthorized access to this product.');
         }
 
-        $categories = Category::orderBy('title')->get();
-        $brands = Brand::orderBy('title')->get();
+        $categories = PerformanceCache::remember('admin_category_options', fn () => Category::select(['id', 'title'])->orderBy('title')->get());
+        $brands = PerformanceCache::remember('admin_brand_options', fn () => Brand::select(['id', 'title'])->orderBy('title')->get());
 
         return view('admin.products.edit', compact('product', 'categories', 'brands'));
     }
@@ -163,8 +166,8 @@ class ProductController extends Controller
         $validated = $request->validated();
 
         // Handle slug
-        $slug = !empty($validated['slug']) 
-            ? Str::slug($validated['slug']) 
+        $slug = ! empty($validated['slug'])
+            ? Str::slug($validated['slug'])
             : Str::slug($validated['name']);
 
         // Merge existing retained images with any newly uploaded images
@@ -182,7 +185,7 @@ class ProductController extends Controller
 
         // Key features
         $keyfeatures = [];
-        if (!empty($validated['keyfeature'])) {
+        if (! empty($validated['keyfeature'])) {
             $keyfeatures = array_values(array_filter(array_map('trim', (array) $validated['keyfeature'])));
         }
 

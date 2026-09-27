@@ -9,8 +9,9 @@ use App\Models\Category;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\PerformanceCache;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -21,51 +22,60 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
         $isVendor = $user->isVendor();
-        $cacheKey = 'admin_dashboard_full_view_' . $user->id;
+        $cacheKey = 'admin_dashboard_'.$user->role.'_'.$user->id;
 
-        // Cache the aggregated dashboard dataset for 60s to ensure sub-5ms page loads
-        $data = Cache::remember($cacheKey, 60, function () use ($user, $isVendor) {
+        // Keep the authenticated user and role in the key to preserve vendor scoping.
+        $data = PerformanceCache::remember($cacheKey, function () use ($user, $isVendor) {
             $productQuery = Product::query();
             if ($isVendor) {
                 $productQuery->where('user_id', $user->id);
             }
 
-            $totalProducts = (clone $productQuery)->count();
-            $lowStockCount = (clone $productQuery)->where('stock', '<=', 5)->count();
+            // Each aggregate returns one row. Combining them in one statement avoids
+            // six separate network round trips to the remote production database.
+            $productMetrics = (clone $productQuery)
+                ->selectRaw('COUNT(*) as total_products, SUM(CASE WHEN stock <= 5 THEN 1 ELSE 0 END) as low_stock');
+            $totalPriceColumn = Order::query()->getQuery()->getGrammar()->wrap('totalPrice');
+            $orderMetrics = Order::query()->selectRaw('COUNT(*) as total_orders')
+                ->selectRaw('SUM(CASE WHEN status != ? THEN '.$totalPriceColumn.' ELSE 0 END) as revenue', ['cancelled']);
+            $userMetrics = User::query()
+                ->selectRaw('COUNT(*) as total_users, SUM(CASE WHEN role = ? THEN 1 ELSE 0 END) as vendors', ['vendor']);
 
-            // Orders metrics
-            $totalOrders = Order::count();
-            $totalRevenue = (float) (Order::where('status', '!=', 'cancelled')->sum('totalPrice') ?: 0);
+            $metrics = DB::query()->fromSub($productMetrics, 'product_metrics')
+                ->crossJoinSub($orderMetrics, 'order_metrics')
+                ->crossJoinSub($userMetrics, 'user_metrics')
+                ->select(['product_metrics.*', 'order_metrics.*', 'user_metrics.*'])
+                ->selectSub(Banner::query()->selectRaw('COUNT(*)'), 'total_banners')
+                ->selectSub(Category::query()->selectRaw('COUNT(*)'), 'total_categories')
+                ->selectSub(Brand::query()->selectRaw('COUNT(*)'), 'total_brands')
+                ->first();
 
-            // Other metrics
-            $totalBanners = Banner::count();
-            $totalCategories = Category::count();
-            $totalBrands = Brand::count();
-            $totalVendors = User::where('role', 'vendor')->count();
-            $totalUsers = User::count();
+            $totalProducts = (int) $metrics->total_products;
+            $lowStockCount = (int) $metrics->low_stock;
+            $totalOrders = (int) $metrics->total_orders;
+            $totalRevenue = (float) $metrics->revenue;
+            $totalBanners = (int) $metrics->total_banners;
+            $totalCategories = (int) $metrics->total_categories;
+            $totalBrands = (int) $metrics->total_brands;
+            $totalVendors = (int) $metrics->vendors;
+            $totalUsers = (int) $metrics->total_users;
 
-            // Recent products with eager-loaded relations
-            $recentProducts = (clone $productQuery)->with(['brand', 'categories'])->latest()->take(5)->get();
+            // These cards only render product scalars; no brand/category queries are needed.
+            $recentProducts = (clone $productQuery)->select(['id', 'name', 'price', 'stock', 'images'])->latest()->take(5)->get();
 
             // Recent customer orders
-            $recentOrders = Order::latest()->take(6)->get();
+            $recentOrders = Order::select(['id', 'orderNumber', 'customerName', 'totalPrice', 'status'])->latest()->take(6)->get();
 
             // Top best sellers with sales count
             $bestSellersQuery = Product::query()
-                ->with(['brand', 'categories'])
-                ->withSum(['orderItems as sales_count' => function ($q) {
-                    $q->whereHas('order', function ($sub) {
-                        $sub->where('status', '!=', 'cancelled');
-                    });
-                }], 'quantity');
+                ->select(['products.id', 'products.name', 'products.price', 'products.stock', 'products.images'])
+                ->rankedBySales();
 
             if ($isVendor) {
                 $bestSellersQuery->where('user_id', $user->id);
             }
 
             $bestSellers = $bestSellersQuery
-                ->orderByDesc('sales_count')
-                ->orderBy('id', 'asc')
                 ->take(5)
                 ->get();
 
@@ -87,12 +97,13 @@ class DashboardController extends Controller
 
         // Self-healing guard: if cached data was corrupted or contains incomplete classes, purge and reload
         if (
-            !is_array($data) ||
+            ! is_array($data) ||
             (isset($data['recentOrders']) && $data['recentOrders'] instanceof \__PHP_Incomplete_Class) ||
             (isset($data['recentProducts']) && $data['recentProducts'] instanceof \__PHP_Incomplete_Class) ||
             (isset($data['bestSellers']) && $data['bestSellers'] instanceof \__PHP_Incomplete_Class)
         ) {
-            Cache::forget($cacheKey);
+            PerformanceCache::invalidate();
+
             return redirect()->route('admin.dashboard');
         }
 
@@ -106,17 +117,7 @@ class DashboardController extends Controller
      */
     public function purgeCache()
     {
-        $user = Auth::user();
-        if ($user) {
-            Cache::forget('admin_dashboard_full_view_' . $user->id);
-            Cache::forget('admin_dashboard_scalar_metrics_' . $user->id);
-            Cache::forget('admin_bestseller_ids_' . ($user->isVendor() ? $user->id : 'all'));
-        }
-
-        // Also flush API cached endpoints for instant sync
-        Cache::forget('api_hot_deals');
-        Cache::forget('api_categories_0');
-        Cache::forget('api_brands');
+        PerformanceCache::invalidate();
 
         return back()->with('success', 'Dashboard & API cache purged successfully! Fresh data loaded.');
     }

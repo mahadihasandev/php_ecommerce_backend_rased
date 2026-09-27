@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreBrandRequest;
 use App\Models\Brand;
 use App\Services\ImageUploadService;
+use App\Services\PerformanceCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -15,9 +16,11 @@ class BrandController extends Controller
         protected ImageUploadService $imageUploadService
     ) {}
 
-    public function index()
+    public function index(Request $request)
     {
-        $brands = Brand::withCount('products')->latest()->paginate(15);
+        $brands = PerformanceCache::remember(PerformanceCache::requestKey('admin_brands_', $request),
+            fn () => Brand::withCount('products')->latest()->paginate(15));
+
         return view('admin.brands.index', compact('brands'));
     }
 
@@ -30,8 +33,8 @@ class BrandController extends Controller
     {
         $validated = $request->validated();
 
-        $slug = !empty($validated['slug']) 
-            ? Str::slug($validated['slug']) 
+        $slug = ! empty($validated['slug'])
+            ? Str::slug($validated['slug'])
             : Str::slug($validated['title']);
 
         $imageUrl = null;
@@ -55,6 +58,7 @@ class BrandController extends Controller
     public function edit($id)
     {
         $brand = Brand::findOrFail($id);
+
         return view('admin.brands.edit', compact('brand'));
     }
 
@@ -64,13 +68,13 @@ class BrandController extends Controller
 
         $validated = $request->validate([
             'title' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255', 'unique:brands,slug,' . $id],
+            'slug' => ['nullable', 'string', 'max:255', 'unique:brands,slug,'.$id],
             'description' => ['nullable', 'string'],
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp,svg', 'max:5120'],
         ]);
 
-        $slug = !empty($validated['slug']) 
-            ? Str::slug($validated['slug']) 
+        $slug = ! empty($validated['slug'])
+            ? Str::slug($validated['slug'])
             : Str::slug($validated['title']);
 
         $imageUrl = $brand->image;

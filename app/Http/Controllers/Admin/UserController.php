@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\PerformanceCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -27,21 +28,22 @@ class UserController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('store_name', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('store_name', 'like', "%{$search}%");
             });
         }
 
-        $users = $query->paginate(15)->withQueryString();
+        $users = PerformanceCache::remember(PerformanceCache::requestKey('admin_users_', $request),
+            fn () => $query->paginate(15)->withQueryString());
 
-        $roleCounts = \Illuminate\Support\Facades\Cache::remember('admin_user_role_counts', 60, function () {
-            return [
-                'all' => User::count(),
-                'admin' => User::where('role', 'admin')->count(),
-                'vendor' => User::where('role', 'vendor')->count(),
-                'staff' => User::where('role', 'staff')->count(),
-                'customer' => User::where('role', 'customer')->count(),
-            ];
+        $roleCounts = PerformanceCache::remember('admin_user_role_counts', function () {
+            $counts = User::query()->select('role')->selectRaw('COUNT(*) as aggregate')
+                ->groupBy('role')->pluck('aggregate', 'role')->map(fn ($count) => (int) $count);
+
+            return ['all' => $counts->sum()] + array_replace(
+                array_fill_keys(['admin', 'vendor', 'staff', 'customer'], 0),
+                $counts->all()
+            );
         });
 
         return view('admin.users.index', compact('users', 'roleCounts', 'role'));
@@ -53,6 +55,7 @@ class UserController extends Controller
     public function create()
     {
         $availablePermissions = User::PERMISSIONS;
+
         return view('admin.users.create', compact('availablePermissions'));
     }
 
@@ -74,8 +77,8 @@ class UserController extends Controller
             'permissions.*' => ['string', Rule::in(array_keys(User::PERMISSIONS))],
         ]);
 
-        $permissions = $validated['role'] === 'admin' 
-            ? array_keys(User::PERMISSIONS) 
+        $permissions = $validated['role'] === 'admin'
+            ? array_keys(User::PERMISSIONS)
             : ($validated['permissions'] ?? []);
 
         $user = User::create([
@@ -131,8 +134,8 @@ class UserController extends Controller
             return back()->with('error', 'You cannot change your own role or suspend your own admin account.');
         }
 
-        $permissions = $validated['role'] === 'admin' 
-            ? array_keys(User::PERMISSIONS) 
+        $permissions = $validated['role'] === 'admin'
+            ? array_keys(User::PERMISSIONS)
             : ($validated['permissions'] ?? []);
 
         $updateData = [
@@ -146,7 +149,7 @@ class UserController extends Controller
             'permissions' => $permissions,
         ];
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $updateData['password'] = Hash::make($validated['password']);
         }
 

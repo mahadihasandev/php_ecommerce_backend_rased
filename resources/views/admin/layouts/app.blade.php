@@ -293,14 +293,6 @@
         </main>
     </div>
 
-    <!-- Initialize Lucide Icons -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.lucide) {
-                lucide.createIcons();
-            }
-        });
-    </script>
     @stack('scripts')
 </body>
 </html>

@@ -50,7 +50,7 @@
                 <h3 class="text-base font-bold text-white mb-4">Purchased Items</h3>
 
                 <div class="divide-y divide-slate-800/80">
-                    @forelse($order->orderItems as $item)
+                    @forelse($order->products as $item)
                     @php
                         $product = $item->product;
                         $img = $product && is_array($product->images) && count($product->images) > 0 ? $product->images[0] : null;
@@ -118,10 +118,10 @@
                         <span class="text-slate-500 block">Email Address</span>
                         <span class="text-white font-semibold">{{ $order->email }}</span>
                     </div>
-                    @if($order->address?->phone)
+                    @if(data_get($order->address, 'phone'))
                     <div>
                         <span class="text-slate-500 block">Phone</span>
-                        <span class="text-white font-semibold">{{ $order->address->phone }}</span>
+                        <span class="text-white font-semibold">{{ data_get($order->address, 'phone') }}</span>
                     </div>
                     @endif
                 </div>
@@ -132,9 +132,9 @@
                 <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Shipping Destination</h3>
                 @if($order->address)
                 <div class="text-xs text-slate-300 space-y-1">
-                    <p class="font-bold text-white">{{ $order->address->name }}</p>
-                    <p>{{ $order->address->address }}</p>
-                    <p>{{ $order->address->city }}, {{ $order->address->state }} {{ $order->address->postalCode }}</p>
+                    <p class="font-bold text-white">{{ data_get($order->address, 'name') }}</p>
+                    <p>{{ data_get($order->address, 'address') }}</p>
+                    <p>{{ data_get($order->address, 'city') }}, {{ data_get($order->address, 'state') }} {{ data_get($order->address, 'postalCode', data_get($order->address, 'zip')) }}</p>
                 </div>
                 @else
                 <p class="text-xs text-slate-500 italic">No specific address linked for this order.</p>

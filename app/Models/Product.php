@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -44,12 +45,12 @@ class Product extends Model
     protected function keyfeature(): Attribute
     {
         $cleanList = function ($items) {
-            if (!is_array($items)) {
+            if (! is_array($items)) {
                 return [];
             }
             $result = [];
             foreach ($items as $item) {
-                if (!is_string($item)) {
+                if (! is_string($item)) {
                     continue;
                 }
                 $trimmed = trim($item, " \t\n\r\0\x0B\"'•-");
@@ -57,6 +58,7 @@ class Product extends Model
                     $result[] = $trimmed;
                 }
             }
+
             return array_values($result);
         };
 
@@ -75,8 +77,10 @@ class Product extends Model
                 if (is_string($value)) {
                     $unquoted = trim($value, " \t\n\r\0\x0B\"'");
                     $parts = preg_split('/(?<=[.!?])\s+|\r?\n|•\s*/', $unquoted, -1, PREG_SPLIT_NO_EMPTY);
+
                     return $cleanList($parts ?: [$unquoted]);
                 }
+
                 return (array) $value;
             },
             set: function ($value) use ($cleanList) {
@@ -90,8 +94,10 @@ class Product extends Model
                     }
                     $unquoted = trim($value, " \t\n\r\0\x0B\"'");
                     $parts = preg_split('/(?<=[.!?])\s+|\r?\n|•\s*/', $unquoted, -1, PREG_SPLIT_NO_EMPTY);
+
                     return json_encode($cleanList($parts ?: [$unquoted]));
                 }
+
                 return $value;
             }
         );
@@ -109,6 +115,27 @@ class Product extends Model
         return Attribute::make(
             get: fn () => $this->attributes['slug'] ?? ''
         );
+    }
+
+    public function scopeRankedBySales(Builder $query): Builder
+    {
+        // Aggregate the order history once instead of executing a correlated sum
+        // for every product. COALESCE also keeps unsold products last on PostgreSQL.
+        $sales = OrderItem::query()
+            ->join('orders', 'orders.id', '=', 'order_items.order_id')
+            ->where('orders.status', '!=', 'cancelled')
+            ->select('order_items.product_id')
+            ->selectRaw('SUM(order_items.quantity) as sales_count')
+            ->groupBy('order_items.product_id');
+
+        if ($query->getQuery()->columns === null) {
+            $query->select('products.*');
+        }
+
+        return $query->leftJoinSub($sales, 'product_sales', 'products.id', '=', 'product_sales.product_id')
+            ->selectRaw('COALESCE(product_sales.sales_count, 0) as sales_count')
+            ->orderByDesc('sales_count')
+            ->orderBy('products.id');
     }
 
     public function brand(): BelongsTo

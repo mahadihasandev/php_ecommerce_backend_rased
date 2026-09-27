@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Services\PerformanceCache;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
@@ -14,7 +15,7 @@ class OrderController extends Controller
     public function index(Request $request)
     {
         $status = $request->input('status');
-        $query = Order::with(['orderItems.product', 'address', 'user'])->latest();
+        $query = Order::withCount('products')->latest();
 
         if ($status && in_array($status, ['pending', 'processing', 'shipped', 'delivered', 'cancelled'], true)) {
             $query->where('status', $status);
@@ -23,22 +24,22 @@ class OrderController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('orderNumber', 'like', "%{$search}%")
-                  ->orWhere('customerName', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('customerName', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
-        $orders = $query->paginate(15)->withQueryString();
-        
-        $statusCounts = \Illuminate\Support\Facades\Cache::remember('admin_order_status_counts', 60, function () {
-            return [
-                'all' => Order::count(),
-                'pending' => Order::where('status', 'pending')->count(),
-                'processing' => Order::where('status', 'processing')->count(),
-                'shipped' => Order::where('status', 'shipped')->count(),
-                'delivered' => Order::where('status', 'delivered')->count(),
-                'cancelled' => Order::where('status', 'cancelled')->count(),
-            ];
+        $orders = PerformanceCache::remember(PerformanceCache::requestKey('admin_orders_', $request),
+            fn () => $query->paginate(15)->withQueryString());
+
+        $statusCounts = PerformanceCache::remember('admin_order_status_counts', function () {
+            $counts = Order::query()->select('status')->selectRaw('COUNT(*) as aggregate')
+                ->groupBy('status')->pluck('aggregate', 'status')->map(fn ($count) => (int) $count);
+
+            return ['all' => $counts->sum()] + array_replace(
+                array_fill_keys(['pending', 'processing', 'shipped', 'delivered', 'cancelled'], 0),
+                $counts->all()
+            );
         });
 
         return view('admin.orders.index', compact('orders', 'statusCounts', 'status'));
@@ -49,7 +50,8 @@ class OrderController extends Controller
      */
     public function show($id)
     {
-        $order = Order::with(['orderItems.product', 'address', 'user'])->findOrFail($id);
+        $order = Order::with('products.product')->findOrFail($id);
+
         return view('admin.orders.show', compact('order'));
     }
 
@@ -68,6 +70,6 @@ class OrderController extends Controller
             'status' => $validated['status'],
         ]);
 
-        return back()->with('success', "Order #{$order->orderNumber} status updated to " . ucfirst($validated['status']) . ".");
+        return back()->with('success', "Order #{$order->orderNumber} status updated to ".ucfirst($validated['status']).'.');
     }
 }

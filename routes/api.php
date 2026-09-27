@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Middleware\InvalidatePerformanceCache;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -17,14 +18,14 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Health check & Keep-alive endpoint
-Route::get('/health', fn() => response()->json([
+Route::get('/health', fn () => response()->json([
     'status' => 'ok',
     'uptime' => 'healthy',
-    'time' => now()->toIso8601String()
+    'time' => now()->toIso8601String(),
 ]));
 
 // Authentication
-Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register', [AuthController::class, 'register'])->middleware(InvalidatePerformanceCache::class);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -63,5 +64,5 @@ Route::post('/addresses', [AddressController::class, 'store']);
 
 // Orders
 Route::get('/orders', [OrderController::class, 'index']);
-Route::post('/orders', [OrderController::class, 'store']);
+Route::post('/orders', [OrderController::class, 'store'])->middleware(InvalidatePerformanceCache::class);
 Route::get('/orders/{identifier}', [OrderController::class, 'show']);
