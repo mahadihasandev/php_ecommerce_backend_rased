@@ -13,57 +13,51 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $cacheKey = 'api_products_' . md5(json_encode($request->all()));
 
-        $products = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($request) {
-            $query = Product::with(['brand', 'categories']);
+        $query = Product::with(['brand', 'categories']);
 
-            if ($request->filled('variant')) {
-                $variant = strtolower($request->get('variant'));
-                $query->whereRaw('LOWER(variant) = ?', [$variant]);
-            }
+        if ($request->filled('variant')) {
+            $variant = strtolower($request->get('variant'));
+            $query->whereRaw('LOWER(variant) = ?', [$variant]);
+        }
 
-            if ($request->filled('category')) {
-                $cat = $request->get('category');
-                $query->whereHas('categories', function ($q) use ($cat) {
-                    $q->where('slug', $cat)
-                        ->orWhere('_id', $cat)
-                        ->orWhere('title', $cat);
-                });
-            }
+        if ($request->filled('category')) {
+            $cat = $request->get('category');
+            $query->whereHas('categories', function ($q) use ($cat) {
+                $q->where('slug', $cat)
+                    ->orWhere('_id', $cat)
+                    ->orWhere('title', $cat);
+            });
+        }
 
-            if ($request->filled('brand')) {
-                $brand = $request->get('brand');
-                $query->whereHas('brand', function ($q) use ($brand) {
-                    $q->where('slug', $brand)
-                        ->orWhere('_id', $brand)
-                        ->orWhere('title', $brand)
-                        ->orWhere('brandName', $brand);
-                });
-            }
+        if ($request->filled('brand')) {
+            $brand = $request->get('brand');
+            $query->whereHas('brand', function ($q) use ($brand) {
+                $q->where('slug', $brand)
+                    ->orWhere('_id', $brand)
+                    ->orWhere('title', $brand)
+                    ->orWhere('brandName', $brand);
+            });
+        }
 
-            if ($request->filled('minPrice')) {
-                $query->where('price', '>=', (float) $request->get('minPrice'));
-            }
+        if ($request->filled('minPrice')) {
+            $query->where('price', '>=', (float) $request->get('minPrice'));
+        }
 
-            if ($request->filled('maxPrice')) {
-                $query->where('price', '<=', (float) $request->get('maxPrice'));
-            }
+        if ($request->filled('maxPrice')) {
+            $query->where('price', '<=', (float) $request->get('maxPrice'));
+        }
 
-            $perPage = max(1, min(100, (int) $request->get('limit', $request->get('per_page', 20))));
-            $page = max(1, (int) $request->get('page', 1));
+        $perPage = max(1, min(100, (int) $request->get('limit', $request->get('per_page', 20))));
+        $page = max(1, (int) $request->get('page', 1));
 
-            // Support both standard paginator object and page-sliced array
-            if ($request->boolean('paginate')) {
-                return $query->latest()->paginate($perPage)->toArray();
-            }
+        // Support both standard paginator object and page-sliced array
+        if ($request->boolean('paginate')) {
+            return response()->json($query->latest()->paginate($perPage)->toArray());
+        }
 
-            // Return page-sliced array for direct consumption
-            return $query->latest()->forPage($page, $perPage)->get()->toArray();
-        });
-
-        return response()->json($products)
-            ->header('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300');
+        // Return page-sliced array for direct consumption
+        return response()->json($query->latest()->forPage($page, $perPage)->get()->toArray());
     }
 
     /**
@@ -96,18 +90,13 @@ class ProductController extends Controller
      */
     public function hotDeals()
     {
-        $products = \Illuminate\Support\Facades\Cache::remember('api_hot_deals', 60, function () {
-            return Product::with(['brand', 'categories'])
-                ->where('status', 'hot')
-                ->orWhere('discount', '>', 10)
-                ->latest()
-                ->limit(10)
-                ->get()
-                ->toArray();
-        });
-
-        return response()->json($products)
-            ->header('Cache-Control', 'public, max-age=15, stale-while-revalidate=60');
+        return response()->json(Product::with(['brand', 'categories'])
+            ->where('status', 'hot')
+            ->orWhere('discount', '>', 10)
+            ->latest()
+            ->limit(10)
+            ->get()
+            ->toArray());
     }
 
     /**
@@ -118,38 +107,35 @@ class ProductController extends Controller
     {
         $limit = max(1, min(100, (int) $request->get('limit', $request->get('per_page', 10))));
         $page = max(1, (int) $request->get('page', 1));
-        $cacheKey = 'api_best_sellers_' . $limit . '_p_' . $page . ($request->boolean('paginate') ? '_pag' : '');
 
-        $products = \Illuminate\Support\Facades\Cache::remember($cacheKey, 60, function () use ($limit, $page, $request) {
-            $query = Product::with(['brand', 'categories'])
-                ->withSum(['orderItems as sales_count' => function ($q) {
-                    $q->whereHas('order', function ($sub) {
-                        $sub->where('status', '!=', 'cancelled');
-                    });
-                }], 'quantity')
-                ->orderByDesc('sales_count')
-                ->orderBy('id', 'asc');
-
-            if ($request->boolean('paginate')) {
-                $paginated = $query->paginate($limit);
-                $paginated->getCollection()->transform(function ($product) {
-                    $product->sales_count = (int) ($product->sales_count ?? 0);
-                    return $product;
+        $query = Product::with(['brand', 'categories'])
+            ->withSum(['orderItems as sales_count' => function ($q) {
+                $q->whereHas('order', function ($sub) {
+                    $sub->where('status', '!=', 'cancelled');
                 });
-                return $paginated->toArray();
-            }
+            }], 'quantity')
+            ->orderByDesc('sales_count')
+            ->orderBy('id', 'asc');
 
-            $items = $query->forPage($page, $limit)->get();
-            $items->transform(function ($product) {
+        if ($request->boolean('paginate')) {
+            $paginated = $query->paginate($limit);
+            $paginated->getCollection()->transform(function ($product) {
                 $product->sales_count = (int) ($product->sales_count ?? 0);
+
                 return $product;
             });
 
-            return $items->toArray();
+            return response()->json($paginated->toArray());
+        }
+
+        $items = $query->forPage($page, $limit)->get();
+        $items->transform(function ($product) {
+            $product->sales_count = (int) ($product->sales_count ?? 0);
+
+            return $product;
         });
 
-        return response()->json($products)
-            ->header('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300');
+        return response()->json($items->toArray());
     }
 
     /**

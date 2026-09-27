@@ -1,5 +1,6 @@
 import Alpine from 'alpinejs';
-import { createIcons, icons } from 'lucide';
+import { createIcons } from 'lucide';
+import { icons } from './icons';
 
 // Expose Alpine globally
 window.Alpine = Alpine;

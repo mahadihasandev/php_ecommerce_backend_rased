@@ -10,12 +10,7 @@ class BrandController extends Controller
 {
     public function index(Request $request)
     {
-        $brands = \Illuminate\Support\Facades\Cache::remember('api_brands', 60, function () {
-            return Brand::all()->toArray();
-        });
-
-        return response()->json($brands)
-            ->header('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+        return response()->json(Brand::all()->toArray());
     }
 
     public function show($slug)
