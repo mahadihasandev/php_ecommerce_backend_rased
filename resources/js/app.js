@@ -1,3 +1,4 @@
+import { initAdminLoading } from './admin-loading';
 import Alpine from 'alpinejs';
 import {
     createIcons,
@@ -118,6 +119,7 @@ window.lucide = {
 
 // Start Alpine
 Alpine.start();
+initAdminLoading();
 
 // Auto-run Lucide on initial page load
 if (document.readyState === 'loading') {

@@ -64,7 +64,7 @@
         }
     </style>
 </head>
-<body class="h-full font-sans antialiased overflow-hidden flex bg-slate-950" x-data="{ sidebarOpen: false }">
+<body class="h-full font-sans antialiased overflow-hidden flex bg-slate-950" x-data="{ sidebarOpen: false }" @admin-navigating.window="sidebarOpen = false">
 
     <!-- Top Loading Progress Bar -->
     <div id="admin-top-progress" class="fixed top-0 left-0 h-1 bg-gradient-to-r from-brand-500 via-indigo-400 to-purple-500 z-[9999] transition-all duration-300 pointer-events-none opacity-0 shadow-lg shadow-brand-500/50" style="width: 0%;"></div>
@@ -292,6 +292,8 @@
             </div>
         </main>
     </div>
+
+    @include('admin.components.loading')
 
     @stack('scripts')
 </body>
