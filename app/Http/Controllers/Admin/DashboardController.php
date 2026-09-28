@@ -93,7 +93,7 @@ class DashboardController extends Controller
                 'recentOrders',
                 'bestSellers'
             );
-        });
+        }, ['catalog', 'orders', 'users']);
 
         // Self-healing guard: if cached data was corrupted or contains incomplete classes, purge and reload
         if (

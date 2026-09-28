@@ -148,7 +148,7 @@ class ProductController extends Controller
             });
 
             return $items->toArray();
-        });
+        }, ['catalog', 'orders']);
 
         return response()->json($products)
             ->header('Cache-Control', 'public, max-age=15, s-maxage=15');

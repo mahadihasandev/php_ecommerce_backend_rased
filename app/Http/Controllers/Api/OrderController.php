@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Services\PerformanceCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -74,9 +75,9 @@ class OrderController extends Controller
             'products' => 'nullable|array',
         ]);
 
-        return DB::transaction(function () use ($validated, $request) {
+        $response = DB::transaction(function () use ($validated, $request) {
             $order = Order::create([
-                '_id' => 'ord-' . uniqid(),
+                '_id' => 'ord-'.uniqid(),
                 'orderNumber' => $validated['orderNumber'],
                 'user_id' => $validated['user_id'] ?? optional($request->user())->id,
                 'customerName' => $validated['customerName'],
@@ -106,5 +107,9 @@ class OrderController extends Controller
 
             return response()->json($order->load('products'), 201);
         });
+
+        PerformanceCache::invalidate(['orders']);
+
+        return $response;
     }
 }

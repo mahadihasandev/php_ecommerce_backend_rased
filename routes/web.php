@@ -26,7 +26,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
     Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AdminAuthController::class, 'login']);
     Route::get('/register', [AdminAuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AdminAuthController::class, 'register'])->middleware(InvalidatePerformanceCache::class);
+    Route::post('/register', [AdminAuthController::class, 'register'])->middleware('throttle:10,1,registration');
     Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 });
 

@@ -30,7 +30,7 @@ class OrderController extends Controller
         }
 
         $orders = PerformanceCache::remember(PerformanceCache::requestKey('admin_orders_', $request),
-            fn () => $query->paginate(15)->withQueryString());
+            fn () => $query->paginate(15)->withQueryString(), ['orders']);
 
         $statusCounts = PerformanceCache::remember('admin_order_status_counts', function () {
             $counts = Order::query()->select('status')->selectRaw('COUNT(*) as aggregate')
@@ -40,7 +40,7 @@ class OrderController extends Controller
                 array_fill_keys(['pending', 'processing', 'shipped', 'delivered', 'cancelled'], 0),
                 $counts->all()
             );
-        });
+        }, ['orders']);
 
         return view('admin.orders.index', compact('orders', 'statusCounts', 'status'));
     }
