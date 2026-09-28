@@ -8,7 +8,6 @@ use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
-use App\Http\Middleware\InvalidatePerformanceCache;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -25,7 +24,7 @@ Route::get('/health', fn () => response()->json([
 ]));
 
 // Authentication
-Route::post('/register', [AuthController::class, 'register'])->middleware(InvalidatePerformanceCache::class);
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:10,1,registration');
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -64,5 +63,5 @@ Route::post('/addresses', [AddressController::class, 'store']);
 
 // Orders
 Route::get('/orders', [OrderController::class, 'index']);
-Route::post('/orders', [OrderController::class, 'store'])->middleware(InvalidatePerformanceCache::class);
+Route::post('/orders', [OrderController::class, 'store'])->middleware('throttle:120,1,checkout');
 Route::get('/orders/{identifier}', [OrderController::class, 'show']);

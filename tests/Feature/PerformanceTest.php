@@ -208,6 +208,35 @@ class PerformanceTest extends TestCase
         $this->get('/admin/orders')->assertViewHas('statusCounts', fn ($counts) => $counts['cancelled'] === 1);
     }
 
+    public function test_public_writes_do_not_evict_unrelated_catalog_reads(): void
+    {
+        $this->product('warm-catalog');
+        $this->getJson('/api/products')->assertOk();
+        $this->postJson('/api/orders', [
+            'orderNumber' => 'scoped-checkout', 'customerName' => 'Buyer', 'email' => 'buyer@example.test', 'totalPrice' => 100,
+        ])->assertCreated();
+        $this->postJson('/api/register', [
+            'name' => 'New Customer', 'email' => 'new@example.test', 'password' => 'password123', 'password_confirmation' => 'password123',
+        ])->assertCreated();
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        $this->getJson('/api/products')->assertOk()->assertJsonPath('0.name', 'warm-catalog');
+        $this->assertSame([], DB::getQueryLog());
+        DB::disableQueryLog();
+    }
+
+    public function test_invalid_registration_does_not_invalidate_and_registration_is_throttled(): void
+    {
+        PerformanceCache::remember('user-cache', fn () => 'original', ['users']);
+        $this->post('/admin/register', [])->assertSessionHasErrors();
+        $this->assertSame('original', PerformanceCache::remember('user-cache', fn () => 'replaced', ['users']));
+        Cache::flush();
+        for ($i = 0; $i < 10; $i++) {
+            $this->postJson('/api/register', [])->assertUnprocessable();
+        }
+        $this->postJson('/api/register', [])->assertTooManyRequests();
+    }
+
     public function test_stale_cache_returns_before_refresh_and_invalidation_discards_old_generation(): void
     {
         Cache::flush();

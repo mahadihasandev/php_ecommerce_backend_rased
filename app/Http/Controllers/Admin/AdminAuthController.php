@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\PerformanceCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules\Password;
 
 class AdminAuthController extends Controller
@@ -41,13 +43,15 @@ class AdminAuthController extends Controller
 
                 if ($user->status === 'suspended') {
                     Auth::logout();
+
                     return back()->withErrors([
                         'email' => 'This account has been suspended. Please contact support.',
                     ])->onlyInput('email');
                 }
 
-                if (!in_array($user->role, ['admin', 'vendor', 'staff'], true)) {
+                if (! in_array($user->role, ['admin', 'vendor', 'staff'], true)) {
                     Auth::logout();
+
                     return back()->withErrors([
                         'email' => 'Access denied. You do not have vendor or administrator privileges.',
                     ])->onlyInput('email');
@@ -63,12 +67,12 @@ class AdminAuthController extends Controller
                 'email' => 'The provided credentials do not match our records.',
             ])->onlyInput('email');
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Admin Login Error: ' . $e->getMessage(), [
+            Log::error('Admin Login Error: '.$e->getMessage(), [
                 'exception' => $e,
             ]);
 
             return back()->withErrors([
-                'email' => 'System error: ' . $e->getMessage(),
+                'email' => 'System error: '.$e->getMessage(),
             ])->onlyInput('email');
         }
     }
@@ -101,10 +105,10 @@ class AdminAuthController extends Controller
         ]);
 
         $role = $validated['account_type'];
-        
+
         // Assign initial default permissions based on role
-        $permissions = $role === 'admin' 
-            ? array_keys(User::PERMISSIONS) 
+        $permissions = $role === 'admin'
+            ? array_keys(User::PERMISSIONS)
             : ['manage_products', 'manage_orders'];
 
         $user = User::create([
@@ -113,11 +117,13 @@ class AdminAuthController extends Controller
             'password' => Hash::make($validated['password']),
             'role' => $role,
             'phone' => $validated['phone'] ?? null,
-            'store_name' => $role === 'vendor' ? ($validated['store_name'] ?? $validated['name'] . "'s Store") : null,
+            'store_name' => $role === 'vendor' ? ($validated['store_name'] ?? $validated['name']."'s Store") : null,
             'store_description' => $validated['store_description'] ?? null,
             'permissions' => $permissions,
             'status' => 'active',
         ]);
+
+        PerformanceCache::invalidate(['users']);
 
         Auth::login($user);
         $request->session()->regenerate();

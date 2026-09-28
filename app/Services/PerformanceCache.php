@@ -8,11 +8,15 @@ use Illuminate\Support\Str;
 
 class PerformanceCache
 {
-    private const GENERATION_KEY = 'performance:generation:v1';
+    private const GENERATION_KEY = 'performance:generation:v2';
 
-    public static function remember(string $key, callable $callback): mixed
+    public static function remember(string $key, callable $callback, array $scopes = ['catalog']): mixed
     {
-        $generation = Cache::rememberForever(self::GENERATION_KEY, fn () => (string) Str::uuid());
+        sort($scopes);
+        $generation = implode(':', array_map(
+            fn ($scope) => Cache::rememberForever(self::GENERATION_KEY.':'.$scope, fn () => (string) Str::uuid()),
+            $scopes
+        ));
 
         // Serve recent data immediately while a single worker refreshes after the response.
         // Old generations expire naturally, so file and Redis stores both work without tags.
@@ -29,8 +33,10 @@ class PerformanceCache
         ]));
     }
 
-    public static function invalidate(): void
+    public static function invalidate(array $scopes = ['catalog', 'orders', 'users']): void
     {
-        Cache::forever(self::GENERATION_KEY, (string) Str::uuid());
+        foreach ($scopes as $scope) {
+            Cache::forever(self::GENERATION_KEY.':'.$scope, (string) Str::uuid());
+        }
     }
 }

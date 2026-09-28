@@ -32,6 +32,15 @@ return new class extends Migration
         foreach ($this->indexes() as [$table, $columns, $name]) {
             if (DB::getDriverName() === 'pgsql') {
                 $grammar = DB::connection()->getQueryGrammar();
+                // A cancelled concurrent build can leave an unusable same-named index.
+                // Scope the lookup to the target table so another schema is untouched.
+                $invalid = DB::selectOne(
+                    'SELECT i.indexrelid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid WHERE i.indrelid = to_regclass(?) AND c.relname = ? AND NOT i.indisvalid',
+                    [$table, $name]
+                );
+                if ($invalid) {
+                    DB::statement('DROP INDEX CONCURRENTLY '.$grammar->wrap($name));
+                }
                 $wrappedColumns = implode(', ', array_map($grammar->wrap(...), $columns));
                 DB::statement('CREATE INDEX CONCURRENTLY IF NOT EXISTS '.$grammar->wrap($name)
                     .' ON '.$grammar->wrapTable($table).' ('.$wrappedColumns.')');

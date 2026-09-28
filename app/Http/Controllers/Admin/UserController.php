@@ -34,7 +34,7 @@ class UserController extends Controller
         }
 
         $users = PerformanceCache::remember(PerformanceCache::requestKey('admin_users_', $request),
-            fn () => $query->paginate(15)->withQueryString());
+            fn () => $query->paginate(15)->withQueryString(), ['catalog', 'users']);
 
         $roleCounts = PerformanceCache::remember('admin_user_role_counts', function () {
             $counts = User::query()->select('role')->selectRaw('COUNT(*) as aggregate')
@@ -44,7 +44,7 @@ class UserController extends Controller
                 array_fill_keys(['admin', 'vendor', 'staff', 'customer'], 0),
                 $counts->all()
             );
-        });
+        }, ['users']);
 
         return view('admin.users.index', compact('users', 'roleCounts', 'role'));
     }
