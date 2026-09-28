@@ -72,3 +72,29 @@
     from { opacity: 0; transform: translateY(4px); }
     to { opacity: 1; transform: translateY(0); }
 }
+
+/* Keep the existing page in place beneath the navigation skeleton. */
+#admin-loading {
+    position: fixed;
+    z-index: 40;
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+#admin-loading[hidden], #admin-loading [hidden] { display: none !important; }
+#admin-top-progress.is-loading {
+    opacity: 1;
+    width: 100% !important;
+    transform-origin: left;
+    animation: admin-progress 1.6s ease-in-out infinite;
+}
+@keyframes admin-progress {
+    0% { transform: translateX(-100%) scaleX(.35); }
+    100% { transform: translateX(100%) scaleX(.65); }
+}
+@media (prefers-reduced-motion: reduce) {
+    #admin-loading .shimmer::after,
+    #admin-loading .animate-fade-in,
+    #admin-top-progress.is-loading { animation: none; }
+    #admin-loading .shimmer::after { transform: none; }
+    #admin-top-progress.is-loading { transform: none; }
+}

@@ -1,18 +1,6 @@
 <div id="admin-skeleton-wrapper" class="space-y-8 animate-fade-in">
-    <!-- Live Loading Status Pill -->
-    <div class="flex items-center justify-between">
-        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-semibold shadow-xs">
-            <span class="w-2 h-2 rounded-full bg-brand-400 animate-ping"></span>
-            <span id="skeleton-status-text">Loading live store analytics & catalog metrics...</span>
-        </div>
-        <div class="hidden sm:flex items-center gap-2 text-xs text-slate-500">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span>Sub-millisecond cache synchronized</span>
-        </div>
-    </div>
-
     <!-- 1. DASHBOARD OVERVIEW SKELETON -->
-    <div id="skeleton-dashboard-view" class="space-y-8">
+    <div data-skeleton-view="dashboard" class="space-y-8">
         <!-- Hero / Welcome Banner Skeleton -->
         <div class="relative overflow-hidden rounded-3xl bg-slate-900/90 border border-slate-800/80 p-8 shadow-2xl">
             <div class="max-w-2xl space-y-4">
@@ -41,7 +29,7 @@
 
         <!-- Quick Actions Bar Skeleton -->
         <div class="p-6 rounded-2xl bg-slate-900/50 border border-slate-800/80 backdrop-blur-sm space-y-4">
-            <div class="h-3.5 w-48 rounded-md bg-slate-800 shimmer"></div>
+            <div class="h-3.5 w-48 max-w-full rounded-md bg-slate-800 shimmer"></div>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 @for($i = 0; $i < 4; $i++)
                 <div class="flex items-center gap-3 p-3.5 rounded-xl bg-slate-800/50 border border-slate-700/40">
@@ -113,7 +101,7 @@
                     <div class="w-8 h-8 rounded-lg bg-amber-500/10 shimmer"></div>
                     <div class="space-y-1">
                         <div class="h-4 w-32 rounded bg-slate-800 shimmer"></div>
-                        <div class="h-2.5 w-48 rounded bg-slate-800/50 shimmer"></div>
+                        <div class="h-2.5 w-48 max-w-full rounded bg-slate-800/50 shimmer"></div>
                     </div>
                 </div>
                 <div class="h-3 w-20 rounded bg-slate-800 shimmer"></div>
@@ -139,13 +127,13 @@
     </div>
 
     <!-- 2. TABLE / CATALOG SKELETON (Products, Orders, Categories, Brands, Users) -->
-    <div id="skeleton-table-view" class="hidden space-y-6">
+    <div data-skeleton-view="table" hidden class="space-y-6">
         <!-- Filter Bar Skeleton -->
         <div class="bg-slate-900/60 p-6 rounded-3xl border border-slate-800/80 backdrop-blur-sm space-y-4">
             <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div class="space-y-1.5">
                     <div class="h-6 w-44 rounded-lg bg-slate-800 shimmer"></div>
-                    <div class="h-3.5 w-72 rounded bg-slate-800/60 shimmer"></div>
+                    <div class="h-3.5 w-72 max-w-full rounded bg-slate-800/60 shimmer"></div>
                 </div>
                 <div class="h-10 w-36 rounded-xl bg-brand-600/30 shimmer"></div>
             </div>
@@ -168,7 +156,7 @@
                     <div class="flex items-center gap-3.5 min-w-0 flex-1">
                         <div class="w-12 h-12 rounded-xl bg-slate-800 shimmer shrink-0"></div>
                         <div class="space-y-2 flex-1 min-w-0">
-                            <div class="h-4 w-48 rounded bg-slate-800 shimmer"></div>
+                            <div class="h-4 w-48 max-w-full rounded bg-slate-800 shimmer"></div>
                             <div class="h-3 w-32 rounded bg-slate-800/60 shimmer"></div>
                         </div>
                     </div>
@@ -192,10 +180,10 @@
     </div>
 
     <!-- 3. FORM / EDITOR SKELETON (Create & Edit views) -->
-    <div id="skeleton-form-view" class="hidden space-y-6">
+    <div data-skeleton-view="form" hidden class="space-y-6">
         <div class="bg-slate-900/60 p-6 rounded-3xl border border-slate-800/80 backdrop-blur-sm space-y-2">
             <div class="h-6 w-52 rounded-lg bg-slate-800 shimmer"></div>
-            <div class="h-3.5 w-80 rounded bg-slate-800/60 shimmer"></div>
+            <div class="h-3.5 w-80 max-w-full rounded bg-slate-800/60 shimmer"></div>
         </div>
 
         <div class="bg-slate-900/80 rounded-3xl border border-slate-800/80 p-6 sm:p-8 space-y-6 shadow-xl">

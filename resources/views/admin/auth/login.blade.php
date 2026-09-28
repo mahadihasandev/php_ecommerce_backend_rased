@@ -153,5 +153,6 @@
             document.getElementById('password').value = password;
         }
     </script>
+    @include('admin.components.loading')
 </body>
 </html>

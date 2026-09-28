@@ -198,5 +198,6 @@
         </div>
     </div>
 
+    @include('admin.components.loading')
 </body>
 </html>
