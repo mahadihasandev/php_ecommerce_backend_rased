@@ -1,5 +1,9 @@
 <?php
 
+// Force SCRIPT_NAME and PHP_SELF to /index.php so Symfony Request does not strip /api from request URIs
+$_SERVER['SCRIPT_NAME'] = '/index.php';
+$_SERVER['PHP_SELF'] = '/index.php';
+
 // Prepare serverless environment for Vercel
 if (isset($_ENV['VERCEL']) || isset($_SERVER['VERCEL']) || getenv('VERCEL')) {
     $tmpDir = sys_get_temp_dir();

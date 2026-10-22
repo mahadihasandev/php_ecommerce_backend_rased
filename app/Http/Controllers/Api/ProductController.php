@@ -86,7 +86,8 @@ class ProductController extends Controller
             } else {
                 $query->where(function ($q) use ($slug) {
                     $q->where('slug', $slug)
-                        ->orWhere('_id', $slug);
+                        ->orWhere('_id', $slug)
+                        ->orWhereRaw('LOWER(slug) = ?', [strtolower($slug)]);
                 });
             }
 
@@ -166,11 +167,18 @@ class ProductController extends Controller
         }
 
         $products = PerformanceCache::remember('api_search_'.hash('sha256', $keyword), function () use ($keyword) {
+            $driver = \Illuminate\Support\Facades\DB::getDriverName();
+            $like = $driver === 'pgsql' ? 'ilike' : 'like';
+            $spaceVariant = str_replace('-', ' ', $keyword);
+            $dashVariant = str_replace(' ', '-', strtolower($keyword));
+
             return Product::with(['brand', 'categories'])
-                ->where(function ($q) use ($keyword) {
-                    $q->where('name', 'like', "%{$keyword}%")
-                        ->orWhere('slug', 'like', "%{$keyword}%")
-                        ->orWhere('variant', 'like', "%{$keyword}%");
+                ->where(function ($q) use ($keyword, $spaceVariant, $dashVariant, $like) {
+                    $q->where('name', $like, "%{$keyword}%")
+                        ->orWhere('slug', $like, "%{$keyword}%")
+                        ->orWhere('variant', $like, "%{$keyword}%")
+                        ->orWhere('name', $like, "%{$spaceVariant}%")
+                        ->orWhere('slug', $like, "%{$dashVariant}%");
                 })
                 ->latest()
                 ->get()->toArray();
