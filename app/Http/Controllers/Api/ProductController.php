@@ -169,10 +169,11 @@ class ProductController extends Controller
         $products = PerformanceCache::remember('api_search_'.hash('sha256', $keyword), function () use ($keyword) {
             $driver = \Illuminate\Support\Facades\DB::getDriverName();
             $like = $driver === 'pgsql' ? 'ilike' : 'like';
-            $spaceVariant = str_replace('-', ' ', $keyword);
+            $spaceVariant = str_replace(['-', '_'], ' ', $keyword);
             $dashVariant = str_replace(' ', '-', strtolower($keyword));
 
-            return Product::with(['brand', 'categories'])
+            // 1. Try exact / whole phrase match
+            $results = Product::with(['brand', 'categories'])
                 ->where(function ($q) use ($keyword, $spaceVariant, $dashVariant, $like) {
                     $q->where('name', $like, "%{$keyword}%")
                         ->orWhere('slug', $like, "%{$keyword}%")
@@ -181,7 +182,32 @@ class ProductController extends Controller
                         ->orWhere('slug', $like, "%{$dashVariant}%");
                 })
                 ->latest()
-                ->get()->toArray();
+                ->get();
+
+            if ($results->isNotEmpty()) {
+                return $results->toArray();
+            }
+
+            // 2. Tokenized fallback for compound queries (e.g., bose-quietcomfort-ultra-earbuds)
+            $words = array_values(array_filter(preg_split('/[\s\-_]+/', $keyword), fn ($w) => strlen($w) >= 3));
+            if (!empty($words)) {
+                $tokenQuery = Product::with(['brand', 'categories'])
+                    ->where(function ($q) use ($words, $like) {
+                        foreach ($words as $w) {
+                            $q->orWhere('name', $like, "%{$w}%")
+                              ->orWhere('slug', $like, "%{$w}%");
+                        }
+                    })
+                    ->latest()
+                    ->limit(20)
+                    ->get();
+
+                if ($tokenQuery->isNotEmpty()) {
+                    return $tokenQuery->toArray();
+                }
+            }
+
+            return [];
         });
 
         return response()->json($products);
