@@ -12,12 +12,14 @@ if (isset($_ENV['VERCEL']) || isset($_SERVER['VERCEL']) || getenv('VERCEL')) {
         @copy(__DIR__ . '/../bootstrap/cache/services.php', $tmpDir . '/services.php');
     }
 
+    // Ensure dynamic database config is always evaluated freshly
+    if (file_exists($tmpDir . '/config.php')) {
+        @unlink($tmpDir . '/config.php');
+    }
+
     // Set environment variables for cache locations
     putenv("APP_PACKAGES_CACHE={$tmpDir}/packages.php");
     putenv("APP_SERVICES_CACHE={$tmpDir}/services.php");
-    putenv("APP_CONFIG_CACHE={$tmpDir}/config.php");
-    putenv("APP_ROUTES_CACHE={$tmpDir}/routes.php");
-    putenv("APP_EVENTS_CACHE={$tmpDir}/events.php");
     putenv("VIEW_COMPILED_PATH={$tmpDir}/views");
 
     if (!is_dir($tmpDir . '/views')) {

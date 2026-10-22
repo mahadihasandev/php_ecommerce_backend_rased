@@ -86,35 +86,52 @@ return [
             ]) : [],
         ],
 
-        'pgsql' => [
-            'driver' => 'pgsql',
-            'url' => (function () {
-                $rawUrl = env('DB_URL') ?: env('DATABASE_URL') ?: env('POSTGRES_URL') ?: env('DATABASE_URL_UNPOOLED');
-                if ($rawUrl && str_contains($rawUrl, '-pooler.')) {
-                    $rawUrl = str_replace('-pooler.', '.', $rawUrl);
-                }
-                return $rawUrl;
-            })(),
-            'host' => (function () {
-                $rawHost = env('DB_HOST') ?: env('PGHOST_UNPOOLED') ?: env('PGHOST', '127.0.0.1');
-                if ($rawHost && str_contains($rawHost, '-pooler.')) {
-                    $rawHost = str_replace('-pooler.', '.', $rawHost);
-                }
-                return $rawHost;
-            })(),
-            'port' => env('DB_PORT') ?: env('PGPORT', '5432'),
-            'database' => env('DB_DATABASE') ?: env('PGDATABASE', 'laravel'),
-            'username' => env('DB_USERNAME') ?: env('PGUSER', 'root'),
-            'password' => env('DB_PASSWORD') ?: env('PGPASSWORD', ''),
-            'charset' => env('DB_CHARSET', 'utf8'),
-            'prefix' => '',
-            'prefix_indexes' => true,
-            'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', 'require'),
-            'options' => [
-                \PDO::ATTR_EMULATE_PREPARES => true,
-            ],
-        ],
+        'pgsql' => (function () {
+            $rawUrl = env('DB_URL') ?: env('DATABASE_URL') ?: env('POSTGRES_URL') ?: env('DATABASE_URL_UNPOOLED');
+
+            if ($rawUrl) {
+                $parsed = parse_url($rawUrl);
+                $host = $parsed['host'] ?? '127.0.0.1';
+                $port = $parsed['port'] ?? 5432;
+                $database = ltrim($parsed['path'] ?? '/neondb', '/');
+                $username = isset($parsed['user']) ? urldecode($parsed['user']) : 'root';
+                $password = isset($parsed['pass']) ? urldecode($parsed['pass']) : '';
+            } else {
+                $host = env('DB_HOST') ?: env('PGHOST_UNPOOLED') ?: env('PGHOST', '127.0.0.1');
+                $port = env('DB_PORT') ?: env('PGPORT', '5432');
+                $database = env('DB_DATABASE') ?: env('PGDATABASE', 'laravel');
+                $username = env('DB_USERNAME') ?: env('PGUSER', 'root');
+                $password = env('DB_PASSWORD') ?: env('PGPASSWORD', '');
+            }
+
+            // Extract Neon endpoint ID if connecting to neon.tech
+            $endpoint = '';
+            if (str_contains($host, '.neon.tech')) {
+                $parts = explode('.', $host);
+                $endpoint = str_replace('-pooler', '', $parts[0]);
+                $host = str_replace('-pooler.', '.', $host);
+            }
+
+            $finalHost = $endpoint ? "{$host};options='endpoint={$endpoint}'" : $host;
+
+            return [
+                'driver' => 'pgsql',
+                'url' => null, // Explicitly null so Laravel does not parse and wipe the options
+                'host' => $finalHost,
+                'port' => $port,
+                'database' => $database,
+                'username' => $username,
+                'password' => $password,
+                'charset' => 'utf8',
+                'prefix' => '',
+                'prefix_indexes' => true,
+                'search_path' => 'public',
+                'sslmode' => env('DB_SSLMODE', 'require'),
+                'options' => [
+                    \PDO::ATTR_EMULATE_PREPARES => true,
+                ],
+            ];
+        })(),
 
         'sqlsrv' => [
             'driver' => 'sqlsrv',
