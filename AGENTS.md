@@ -3,6 +3,8 @@
 ## Project Overview
 - **Framework**: Laravel 11 / 12 on PHP 8.4
 - **Deployment Platform**: Vercel Serverless (`vercel-php`) & Container Compatible
+- **Live Vercel Backend**: https://php-ecommerce-backend-rased.vercel.app
+- **Admin Dashboard**: https://php-ecommerce-backend-rased.vercel.app/admin
 - **Database**: Neon PostgreSQL
 
 ---
