@@ -1,25 +1,9 @@
 # Laravel E-Commerce Backend & Multi-Vendor Admin Portal
 
 ## Project Overview
-- **Framework**: Laravel 11 / 12 on PHP 8.4 Alpine + Nginx Container
-- **Live Render URL**: https://php-ecommerce-backend-rased.onrender.com
-- **Admin Dashboard**: https://php-ecommerce-backend-rased.onrender.com/admin
-- **Frontend Storefront**: https://e-commerce-rased.onrender.com
-
----
-
-## Keep-Alive & Inactivity Prevention (Render Free Tier)
-Render free tier containers spin down after 15 minutes of inactivity. To keep both Frontend and Backend continuously awake 24/7 without rebuilding:
-
-1. **In-Container Auto-Pinger (`docker/entrypoint.sh`)**:
-   - A background subshell loops every 13 minutes (780 seconds), executing `curl -s` to both backend (`/health`) and frontend (`/api/health`).
-2. **GitHub Actions 24/7 Cloud Cron (`.github/workflows/keep-alive.yml`)**:
-   - Runs every 13 minutes (`cron: '*/13 * * * *'`) in GitHub Cloud, ensuring zero downtime even if no user visits.
-3. **Dedicated Public Health Routes**:
-   - `GET /health` (Web route, bypasses auth)
-   - `GET /api/health` (API route, instant JSON status)
-4. **Standalone Local Pinger**:
-   - Run `node keep_alive_render.js` from the workspace root.
+- **Framework**: Laravel 11 / 12 on PHP 8.4
+- **Deployment Platform**: Vercel Serverless (`vercel-php`) & Container Compatible
+- **Database**: Neon PostgreSQL
 
 ---
 
