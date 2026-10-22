@@ -79,7 +79,7 @@
                         <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
                             <i data-lucide="lock" class="w-4 h-4"></i>
                         </span>
-                        <input :type="showPassword ? 'text' : 'password'" name="password" id="password" required
+                        <input :type="showPassword ? 'text' : 'password'" name="password" id="password" value="{{ old('password', 'password123') }}" required
                                class="w-full pl-10 pr-11 py-3 bg-slate-950/60 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors"
                                placeholder="••••••••••••">
                         <button type="button" 
@@ -107,7 +107,7 @@
                 <!-- Remember Me & Forgot Password -->
                 <div class="flex items-center justify-between text-xs">
                     <label class="flex items-center gap-2 cursor-pointer text-slate-400 hover:text-slate-300">
-                        <input type="checkbox" name="remember" class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-indigo-500">
+                        <input type="checkbox" name="remember" checked class="w-4 h-4 rounded bg-slate-800 border-slate-700 text-indigo-600 focus:ring-indigo-500">
                         <span>Remember credentials</span>
                     </label>
                 </div>
@@ -122,15 +122,41 @@
 
             <!-- Quick Demo Credentials Fill -->
             <div class="mt-6 pt-5 border-t border-slate-800/80">
-                <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center mb-3">Quick Demo Login</p>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+                        <span>1-Click Demo Login (Employer / Client)</span>
+                    </span>
+                    <span class="text-[10px] bg-indigo-500/10 text-indigo-400 font-semibold px-2 py-0.5 rounded-full border border-indigo-500/20">
+                        Ready to test
+                    </span>
+                </div>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <!-- SuperAdmin Button -->
                     <button type="button" onclick="fillCreds('admin@ecommerce.com', 'password123')" 
-                            class="px-3 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-xs text-indigo-300 font-medium transition-colors text-center">
-                        ⚡ Super Admin
+                            class="p-3 rounded-2xl bg-indigo-950/40 hover:bg-indigo-900/50 border border-indigo-500/30 text-left transition-all hover:scale-[1.02] active:scale-[0.98] group cursor-pointer shadow-lg shadow-indigo-950/50">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                                <span>👑 Super Admin</span>
+                            </span>
+                            <span class="text-[10px] text-indigo-400 font-semibold px-1.5 py-0.5 rounded bg-indigo-500/20 group-hover:bg-indigo-500/30 transition-colors">Fill</span>
+                        </div>
+                        <p class="text-[11px] text-indigo-200 font-mono mt-1.5 truncate">admin@ecommerce.com</p>
+                        <p class="text-[10px] text-indigo-400 font-mono">Password: password123</p>
                     </button>
+
+                    <!-- Test Account Button -->
                     <button type="button" onclick="fillCreds('test@example.com', 'password123')" 
-                            class="px-3 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-xs text-slate-300 font-medium transition-colors text-center">
-                        ⚡ Demo Account
+                            class="p-3 rounded-2xl bg-slate-950/60 hover:bg-slate-800/60 border border-slate-800 hover:border-slate-700 text-left transition-all hover:scale-[1.02] active:scale-[0.98] group cursor-pointer shadow-lg shadow-black/40">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                <span>🛍️ Merchant / Test</span>
+                            </span>
+                            <span class="text-[10px] text-slate-400 font-semibold px-1.5 py-0.5 rounded bg-slate-800 group-hover:bg-slate-700 transition-colors">Fill</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300 font-mono mt-1.5 truncate">test@example.com</p>
+                        <p class="text-[10px] text-slate-500 font-mono">Password: password123</p>
                     </button>
                 </div>
             </div>
