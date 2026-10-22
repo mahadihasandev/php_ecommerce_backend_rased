@@ -91,7 +91,51 @@ class ProductController extends Controller
                 });
             }
 
-            return $query->firstOrFail()->toArray();
+            $prod = $query->first();
+
+            // Scored token fallback for variations in slugs (e.g. apple-watch-ultra-titanium vs apple-watch-ultra-2)
+            if (! $prod && ! is_numeric($slug)) {
+                $words = array_values(array_filter(preg_split('/[\s\-_]+/', (string) $slug), fn ($w) => strlen($w) >= 3));
+                if (! empty($words)) {
+                    $driver = \Illuminate\Support\Facades\DB::getDriverName();
+                    $like = $driver === 'pgsql' ? 'ilike' : 'like';
+
+                    $candidates = Product::with(['brand', 'categories'])
+                        ->where(function ($q) use ($words, $like) {
+                            foreach ($words as $w) {
+                                $q->orWhere('name', $like, "%{$w}%")
+                                  ->orWhere('slug', $like, "%{$w}%");
+                            }
+                        })
+                        ->get();
+
+                    if ($candidates->isNotEmpty()) {
+                        $scored = $candidates->map(function ($p) use ($words) {
+                            $text = strtolower($p->name.' '.$p->getRawOriginal('slug'));
+                            $score = 0;
+                            foreach ($words as $w) {
+                                if (str_contains($text, strtolower($w))) {
+                                    $score++;
+                                }
+                            }
+                            $p->match_score = $score;
+
+                            return $p;
+                        })->sortByDesc('match_score');
+
+                        $best = $scored->first();
+                        if ($best && ($best->match_score ?? 0) >= 2) {
+                            $prod = $best;
+                        }
+                    }
+                }
+            }
+
+            if (! $prod) {
+                abort(404, 'Product not found');
+            }
+
+            return $prod->toArray();
         });
 
         return response()->json($product);
