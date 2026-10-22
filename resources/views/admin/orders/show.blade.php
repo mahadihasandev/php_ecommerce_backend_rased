@@ -13,7 +13,7 @@
             <div class="flex items-center gap-3">
                 <h2 class="text-xl sm:text-2xl font-bold font-mono text-white">#{{ $order->orderNumber }}</h2>
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider
-                    {{ $order->status === 'delivered' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 
+                    {{ $order->status === 'delivered' || $order->status === 'paid' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 
                       ($order->status === 'cancelled' ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 
                       ($order->status === 'shipped' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' :
                       'bg-amber-500/15 text-amber-400 border border-amber-500/30')) }}">
@@ -29,6 +29,7 @@
             @method('PATCH')
             <label class="text-xs font-semibold text-slate-400 pl-2">Update Stage:</label>
             <select name="status" class="px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500">
+                <option value="paid" {{ $order->status === 'paid' ? 'selected' : '' }}>Paid</option>
                 <option value="pending" {{ $order->status === 'pending' ? 'selected' : '' }}>Pending</option>
                 <option value="processing" {{ $order->status === 'processing' ? 'selected' : '' }}>Processing</option>
                 <option value="shipped" {{ $order->status === 'shipped' ? 'selected' : '' }}>Shipped</option>

@@ -18,7 +18,7 @@ class OrderController extends Controller
     {
         $userId = $request->get('user_id') ?? optional($request->user())->id;
 
-        $orders = Order::with('products')
+        $orders = Order::with('products.product')
             ->when($userId, function ($q) use ($userId) {
                 $q->where('user_id', $userId);
             })
@@ -33,7 +33,7 @@ class OrderController extends Controller
      */
     public function show($identifier)
     {
-        $query = Order::with('products');
+        $query = Order::with('products.product');
 
         if (is_numeric($identifier)) {
             $query->where(function ($q) use ($identifier) {
@@ -96,16 +96,25 @@ class OrderController extends Controller
 
             if (! empty($validated['products'])) {
                 foreach ($validated['products'] as $item) {
+                    $rawProductId = $item['id'] ?? $item['productId'] ?? $item['product_id'] ?? null;
+                    $resolvedProductId = null;
+                    if (is_numeric($rawProductId)) {
+                        $resolvedProductId = (int) $rawProductId;
+                    } elseif (is_string($rawProductId) && ! empty($rawProductId)) {
+                        $found = \App\Models\Product::where('_id', $rawProductId)->orWhere('slug', $rawProductId)->first();
+                        $resolvedProductId = $found ? $found->id : null;
+                    }
+
                     OrderItem::create([
                         'order_id' => $order->id,
-                        'product_id' => $item['productId'] ?? $item['product_id'] ?? null,
+                        'product_id' => $resolvedProductId,
                         'quantity' => $item['quantity'] ?? 1,
                         'price' => $item['price'] ?? 0,
                     ]);
                 }
             }
 
-            return response()->json($order->load('products'), 201);
+            return response()->json($order->load('products.product'), 201);
         });
 
         PerformanceCache::invalidate(['orders']);

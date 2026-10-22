@@ -29,7 +29,7 @@
 
         <!-- Status Filter Tabs -->
         <div class="flex items-center gap-2 overflow-x-auto pt-2 border-t border-slate-800/80 scrollbar-none">
-            @foreach(['all' => 'All Orders', 'pending' => 'Pending', 'processing' => 'Processing', 'shipped' => 'Shipped', 'delivered' => 'Delivered', 'cancelled' => 'Cancelled'] as $key => $label)
+            @foreach(['all' => 'All Orders', 'paid' => 'Paid', 'processing' => 'Processing', 'pending' => 'Pending', 'shipped' => 'Shipped', 'delivered' => 'Delivered', 'cancelled' => 'Cancelled'] as $key => $label)
             <a href="{{ route('admin.orders.index', array_merge(request()->except('page'), ['status' => $key === 'all' ? null : $key])) }}" 
                class="px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5
                    {{ (request('status') === $key || (empty(request('status')) && $key === 'all')) ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30' : 'bg-slate-950/40 text-slate-400 hover:text-white border border-slate-800' }}">
@@ -82,7 +82,7 @@
                         </td>
                         <td class="py-4 px-4">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider
-                                {{ $order->status === 'delivered' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 
+                                {{ $order->status === 'delivered' || $order->status === 'paid' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 
                                   ($order->status === 'cancelled' ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30' : 
                                   ($order->status === 'shipped' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' :
                                   'bg-amber-500/15 text-amber-400 border border-amber-500/30')) }}">

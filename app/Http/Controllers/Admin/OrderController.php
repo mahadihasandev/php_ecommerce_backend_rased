@@ -17,7 +17,7 @@ class OrderController extends Controller
         $status = $request->input('status');
         $query = Order::withCount('products')->latest();
 
-        if ($status && in_array($status, ['pending', 'processing', 'shipped', 'delivered', 'cancelled'], true)) {
+        if ($status && in_array($status, ['pending', 'processing', 'paid', 'shipped', 'delivered', 'cancelled'], true)) {
             $query->where('status', $status);
         }
 
@@ -37,7 +37,7 @@ class OrderController extends Controller
                 ->groupBy('status')->pluck('aggregate', 'status')->map(fn ($count) => (int) $count);
 
             return ['all' => $counts->sum()] + array_replace(
-                array_fill_keys(['pending', 'processing', 'shipped', 'delivered', 'cancelled'], 0),
+                array_fill_keys(['pending', 'processing', 'paid', 'shipped', 'delivered', 'cancelled'], 0),
                 $counts->all()
             );
         }, ['orders']);
@@ -63,7 +63,7 @@ class OrderController extends Controller
         $order = Order::findOrFail($id);
 
         $validated = $request->validate([
-            'status' => ['required', 'string', 'in:pending,processing,shipped,delivered,cancelled'],
+            'status' => ['required', 'string', 'in:pending,processing,paid,shipped,delivered,cancelled'],
         ]);
 
         $order->update([
